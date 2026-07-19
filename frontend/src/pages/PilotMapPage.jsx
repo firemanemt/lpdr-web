@@ -1,233 +1,267 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet';
+import L from 'leaflet';
 import { pilotApi, mapApi } from '../services/api';
 import { connectSocket, getSocket } from '../services/socket';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { FiSearch, FiFilter, FiNavigation, FiStar, FiMapPin, FiX, FiCrosshair } from 'react-icons/fi';
+import { FiSearch, FiFilter, FiNavigation, FiStar, FiMapPin, FiX, FiCrosshair, FiPhone } from 'react-icons/fi';
+
+// Fix default marker icons for Leaflet + bundlers
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: markerIcon2x,
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow,
+});
+
+// Custom pilot icon
+function pilotIcon(available) {
+  return L.divIcon({
+    className: 'custom-pilot-icon',
+    html: `<div style="
+      width: 36px; height: 36px; border-radius: 8px;
+      background: ${available ? '#046bd2' : '#374151'};
+      border: 2px solid ${available ? '#3b8de0' : '#4b5563'};
+      box-shadow: ${available ? '0 0 16px rgba(4,107,210,0.4)' : 'none'};
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-weight: 700; font-size: 0.7rem;
+      font-family: 'JetBrains Mono', monospace;
+    ">🛸</div>`,
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+    popupAnchor: [0, -20],
+  });
+}
+
+// User location icon
+const userIcon = L.divIcon({
+  className: 'custom-user-icon',
+  html: `<div style="
+    width: 18px; height: 18px; border-radius: 50%;
+    background: #06b6d4; border: 3px solid white;
+    box-shadow: 0 0 12px rgba(6,182,212,0.5);
+  "></div>`,
+  iconSize: [18, 18],
+  iconAnchor: [9, 9],
+});
+
+// Component to recenter map
+function RecenterMap({ center }) {
+  const map = useMap();
+  useEffect(() => {
+    if (center) map.flyTo(center, 8, { duration: 1 });
+  }, [center, map]);
+  return null;
+}
 
 export default function PilotMapPage() {
   const { isAuthenticated, isPetOwner } = useAuth();
-  const [pilots, setPilots] = useState([]);
   const [selectedPilot, setSelectedPilot] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [searchRadius, setSearchRadius] = useState(50);
   const [filterThermal, setFilterThermal] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
+  const [mapCenter, setMapCenter] = useState([40.7128, -74.0060]); // Default NYC
   const navigate = useNavigate();
 
   const demoPilots = [
-    { id: 'p1', name: 'Mike Rivers', lat: 42.45, lng: -75.06, city: 'Oneonta, NY', available: true, rating: 5.0, thermal: true, price: 150 },
-    { id: 'p2', name: 'Jessica Chen', lat: 40.71, lng: -74.01, city: 'New York, NY', available: true, rating: 4.5, thermal: true, price: 200 },
-    { id: 'p3', name: 'David Martinez', lat: 41.88, lng: -87.63, city: 'Chicago, IL', available: true, rating: 5.0, thermal: true, price: 250 },
-    { id: 'p4', name: 'Amanda Lee', lat: 34.05, lng: -118.24, city: 'Los Angeles, CA', available: false, rating: 4.0, thermal: true, price: 100 },
-    { id: 'p5', name: 'Tom Bradley', lat: 29.76, lng: -95.37, city: 'Houston, TX', available: true, rating: 4.5, thermal: true, price: 175 },
-    { id: 'p6', name: 'Sarah Williams', lat: 39.74, lng: -104.99, city: 'Denver, CO', available: true, rating: 4.0, thermal: false, price: 125 },
-    { id: 'p7', name: 'James Wilson', lat: 47.61, lng: -122.33, city: 'Seattle, WA', available: false, rating: 4.5, thermal: true, price: 200 },
-    { id: 'p8', name: 'Emily Davis', lat: 33.45, lng: -112.07, city: 'Phoenix, AZ', available: true, rating: 5.0, thermal: true, price: 150 },
+    { id: 'p1', name: 'Mike Rivers', lat: 42.4527, lng: -75.0636, city: 'Oneonta, NY', available: true, rating: 5.0, thermal: true, price: 150, bio: 'FAA Part 107 certified. Thermal drone specialist with 5+ years SAR experience.' },
+    { id: 'p2', name: 'Jessica Chen', lat: 40.7128, lng: -74.0060, city: 'New York, NY', available: true, rating: 4.5, thermal: true, price: 200, bio: 'Experienced drone pilot and animal lover. Let me help bring them home.' },
+    { id: 'p3', name: 'David Martinez', lat: 41.8781, lng: -87.6298, city: 'Chicago, IL', available: true, rating: 5.0, thermal: true, price: 250, bio: 'Former firefighter turned drone pilot. Thermal imaging expert.' },
+    { id: 'p4', name: 'Amanda Lee', lat: 34.0522, lng: -118.2437, city: 'Los Angeles, CA', available: false, rating: 4.0, thermal: true, price: 100, bio: 'Animal rescue volunteer and certified drone pilot.' },
+    { id: 'p5', name: 'Tom Bradley', lat: 29.7604, lng: -95.3698, city: 'Houston, TX', available: true, rating: 4.5, thermal: true, price: 175, bio: 'Full-time drone search specialist. 50+ families reunited.' },
+    { id: 'p6', name: 'Sarah Williams', lat: 39.7392, lng: -104.9903, city: 'Denver, CO', available: true, rating: 4.0, thermal: false, price: 125, bio: 'Colorado-based drone pilot. Experienced in mountain terrain searches.' },
+    { id: 'p7', name: 'James Wilson', lat: 47.6062, lng: -122.3321, city: 'Seattle, WA', available: false, rating: 4.5, thermal: true, price: 200, bio: 'Pacific Northwest drone pilot. Rain or shine.' },
+    { id: 'p8', name: 'Emily Davis', lat: 33.4484, lng: -112.0740, city: 'Phoenix, AZ', available: true, rating: 5.0, thermal: true, price: 150, bio: 'Desert search specialist. Thermal imaging in extreme conditions.' },
   ];
 
   useEffect(() => {
-    loadPilots();
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => setUserLocation({ lat: 40.7128, lng: -74.0060 })
+        (pos) => {
+          const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          setUserLocation(loc);
+          setMapCenter([loc.lat, loc.lng]);
+        },
+        () => {
+          setUserLocation({ lat: 40.7128, lng: -74.0060 });
+        }
       );
     }
-    const socket = connectSocket();
-    socket.on('map:update', () => {});
+    // Simulate loading
+    setTimeout(() => setLoading(false), 500);
   }, []);
-
-  const loadPilots = async () => {
-    try {
-      const res = await pilotApi.list();
-      setPilots(res.data.pilots || []);
-    } catch (err) {
-      setPilots([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const filteredPilots = demoPilots.filter(p => {
     if (filterThermal && !p.thermal) return false;
     return true;
   });
 
-  const getInitials = (name) => name.split(' ').map(n => n[0]).join('').toUpperCase();
-
-  const mapBounds = { minLat: 25, maxLat: 50, minLng: -125, maxLng: -65 };
-  const toMapX = (lng) => ((lng - mapBounds.minLng) / (mapBounds.maxLng - mapBounds.minLng)) * 100;
-  const toMapY = (lat) => ((mapBounds.maxLat - lat) / (mapBounds.maxLat - mapBounds.minLat)) * 100;
-
   if (loading) return <LoadingSpinner text="Loading tactical map..." />;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)' }}>
-      {/* Map Area */}
-      <div style={{ flex: 1, position: 'relative', background: 'var(--bg-primary)', overflow: 'hidden' }}>
-        {/* Grid overlay */}
-        <div style={{ position: 'absolute', inset: 0, opacity: 0.08 }}>
-          {Array.from({ length: 12 }).map((_, i) => (
-            <div key={`h${i}`} style={{ position: 'absolute', left: 0, right: 0, top: `${i * 8.33}%`, height: '1px', background: 'var(--primary)' }} />
-          ))}
-          {Array.from({ length: 12 }).map((_, i) => (
-            <div key={`v${i}`} style={{ position: 'absolute', top: 0, bottom: 0, left: `${i * 8.33}%`, width: '1px', background: 'var(--primary)' }} />
-          ))}
+      {/* Map Controls */}
+      <div style={{
+        position: 'absolute', top: '0.75rem', right: '0.75rem', zIndex: 1000,
+        background: 'var(--bg-card)', padding: '0.75rem', borderRadius: '8px',
+        border: '1px solid var(--border-subtle)', boxShadow: 'var(--shadow-lg)',
+      }}>
+        <div style={{ fontWeight: 600, marginBottom: '0.5rem', fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <FiFilter size={12} /> Filters
         </div>
-
-        {/* Radial glow center */}
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '60%', height: '60%', background: 'radial-gradient(circle, rgba(4,107,210,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
-
-        {/* User Location */}
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+          <input type="checkbox" checked={filterThermal} onChange={e => setFilterThermal(e.target.checked)} style={{ accentColor: 'var(--primary)' }} />
+          Thermal drones only
+        </label>
         {userLocation && (
-          <div style={{ position: 'absolute', left: `${toMapX(userLocation.lng)}%`, top: `${toMapY(userLocation.lat)}%`, transform: 'translate(-50%, -50%)', zIndex: 10 }}>
-            <div style={{ width: '14px', height: '14px', background: 'var(--info)', borderRadius: '50%', border: '2px solid white', boxShadow: '0 0 12px rgba(6,182,212,0.5)' }} />
-            <div style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', fontSize: '0.6rem', color: 'var(--info)', fontWeight: 700, whiteSpace: 'nowrap', marginTop: '3px', fontFamily: 'var(--font-mono)' }}>
-              YOU
-            </div>
-          </div>
-        )}
-
-        {/* Pilot Pins */}
-        {filteredPilots.map(pilot => {
-          const x = toMapX(pilot.lng);
-          const y = toMapY(pilot.lat);
-          return (
-            <div key={pilot.id} onClick={() => setSelectedPilot(pilot)} style={{ position: 'absolute', left: `${x}%`, top: `${y}%`, transform: 'translate(-50%, -50%)', zIndex: selectedPilot?.id === pilot.id ? 20 : 5, cursor: 'pointer', transition: 'all 0.2s' }}>
-              <div style={{
-                width: '36px', height: '36px', borderRadius: '8px',
-                background: pilot.available ? 'var(--primary)' : 'var(--bg-elevated)',
-                border: `2px solid ${pilot.available ? 'var(--primary-light)' : 'var(--border-default)'}`,
-                boxShadow: pilot.available ? '0 0 16px var(--primary-glow)' : 'none',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: 'white', fontWeight: 700, fontSize: '0.7rem',
-                fontFamily: 'var(--font-mono)',
-              }}>
-                {getInitials(pilot.name)}
-              </div>
-              <div style={{
-                position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
-                marginTop: '3px', background: 'var(--bg-card)', padding: '1px 6px',
-                borderRadius: '3px', fontSize: '0.6rem', fontWeight: 600,
-                whiteSpace: 'nowrap', border: '1px solid var(--border-subtle)',
-                color: pilot.available ? 'var(--text-secondary)' : 'var(--text-muted)',
-                fontFamily: 'var(--font-mono)',
-              }}>
-                {pilot.city.split(',')[0]}
-              </div>
-            </div>
-          );
-        })}
-
-        {/* State Labels */}
-        {[
-          { label: 'NY', left: '78%', top: '32%' }, { label: 'CA', left: '15%', top: '55%' },
-          { label: 'TX', left: '40%', top: '62%' }, { label: 'IL', left: '55%', top: '40%' },
-          { label: 'CO', left: '32%', top: '45%' }, { label: 'WA', left: '10%', top: '20%' },
-          { label: 'AZ', left: '22%', top: '55%' },
-        ].map((s, i) => (
-          <div key={i} style={{ position: 'absolute', left: `${s.left}%`, top: `${s.top}%`, fontSize: '0.55rem', color: 'rgba(4,107,210,0.15)', fontWeight: 700, letterSpacing: '0.12em', fontFamily: 'var(--font-mono)', pointerEvents: 'none' }}>
-            {s.label}
-          </div>
-        ))}
-
-        {/* Legend */}
-        <div style={{ position: 'absolute', bottom: '0.75rem', left: '0.75rem', background: 'var(--bg-card)', padding: '0.6rem 0.75rem', borderRadius: '8px', border: '1px solid var(--border-subtle)', fontSize: '0.7rem', zIndex: 30, fontFamily: 'var(--font-mono)' }}>
-          <div style={{ fontWeight: 600, marginBottom: '0.3rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: '0.6rem' }}>Legend</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <span className="status-dot online" /> <span style={{ color: 'var(--text-secondary)' }}>Available</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <span className="status-dot offline" /> <span style={{ color: 'var(--text-muted)' }}>Offline</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--info)', border: '1px solid white' }} /> <span style={{ color: 'var(--text-muted)' }}>You</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Filter Control */}
-        <div style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', background: 'var(--bg-card)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-subtle)', zIndex: 30, minWidth: '160px' }}>
-          <div style={{ fontWeight: 600, marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            <FiFilter size={12} /> Filters
-          </div>
-          <div style={{ marginBottom: '0.5rem' }}>
-            <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.15rem', fontFamily: 'var(--font-mono)' }}>
-              Radius: {searchRadius} mi
-            </label>
-            <input type="range" min="10" max="200" value={searchRadius} onChange={e => setSearchRadius(e.target.value)} style={{ width: '100%', accentColor: 'var(--primary)' }} />
-          </div>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', cursor: 'pointer', color: 'var(--text-secondary)' }}>
-            <input type="checkbox" checked={filterThermal} onChange={e => setFilterThermal(e.target.checked)} style={{ accentColor: 'var(--primary)' }} />
-            Thermal only
-          </label>
-        </div>
-
-        {/* Pilot Detail Popup */}
-        {selectedPilot && (
-          <>
-            <div onClick={() => setSelectedPilot(null)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 40 }} />
-            <div style={{
-              position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-              background: 'var(--bg-card)', borderRadius: '12px', padding: '1.5rem',
-              border: '1px solid var(--border-default)', boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
-              zIndex: 50, width: '340px', maxWidth: '90vw',
-            }}>
-              <button onClick={() => setSelectedPilot(null)} style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '1.1rem' }}>
-                <FiX />
-              </button>
-              
-              <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
-                <div style={{ width: '56px', height: '56px', borderRadius: '8px', background: selectedPilot.available ? 'var(--primary-bg)' : 'var(--bg-elevated)', border: `1px solid ${selectedPilot.available ? 'rgba(4,107,210,0.2)' : 'var(--border-default)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '1.1rem', color: selectedPilot.available ? 'var(--primary)' : 'var(--text-muted)', margin: '0 auto 0.75rem', fontFamily: 'var(--font-display)' }}>
-                  {getInitials(selectedPilot.name)}
-                </div>
-                <h3 style={{ marginBottom: '0.15rem', fontSize: '1.05rem' }}>{selectedPilot.name}</h3>
-                <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontFamily: 'var(--font-mono)' }}>
-                  <FiMapPin size={12} style={{ verticalAlign: 'middle' }} /> {selectedPilot.city}
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginBottom: '1rem' }}>
-                <div style={{ textAlign: 'center', padding: '0.5rem', background: 'var(--bg-secondary)', borderRadius: '6px', border: '1px solid var(--border-subtle)' }}>
-                  <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--accent)' }}>{'⭐'.repeat(Math.round(selectedPilot.rating))}</div>
-                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{selectedPilot.rating}</div>
-                </div>
-                <div style={{ textAlign: 'center', padding: '0.5rem', background: 'var(--bg-secondary)', borderRadius: '6px', border: '1px solid var(--border-subtle)' }}>
-                  <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--primary)', fontFamily: 'var(--font-mono)' }}>${selectedPilot.price}</div>
-                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>Per search</div>
-                </div>
-                <div style={{ textAlign: 'center', padding: '0.5rem', background: 'var(--bg-secondary)', borderRadius: '6px', border: '1px solid var(--border-subtle)' }}>
-                  <div style={{ fontSize: '1rem', fontWeight: 700, color: selectedPilot.available ? 'var(--success)' : 'var(--text-muted)' }}>
-                    {selectedPilot.available ? '🟢' : '🔴'}
-                  </div>
-                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>{selectedPilot.available ? 'Online' : 'Offline'}</div>
-                </div>
-              </div>
-
-              {selectedPilot.thermal && (
-                <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-                  <span className="badge badge-green">🔥 Thermal Equipped</span>
-                </div>
-              )}
-
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                {isAuthenticated ? (
-                  <button className="btn btn-primary" style={{ flex: 1 }}>
-                    <FiNavigation size={14} /> Contact Pilot
-                  </button>
-                ) : (
-                  <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => navigate('/register')}>
-                    Sign Up to Contact
-                  </button>
-                )}
-              </div>
-            </div>
-          </>
+          <button onClick={() => setMapCenter([userLocation.lat, userLocation.lng])} style={{
+            marginTop: '0.5rem', width: '100%', padding: '0.4rem', borderRadius: '6px',
+            background: 'var(--primary-bg)', border: '1px solid rgba(4,107,210,0.2)',
+            color: 'var(--primary)', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer',
+            fontFamily: 'var(--font-body)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem',
+          }}>
+            <FiCrosshair size={12} /> My Location
+          </button>
         )}
       </div>
+
+      {/* Legend */}
+      <div style={{
+        position: 'absolute', bottom: '3.5rem', left: '0.75rem', zIndex: 1000,
+        background: 'var(--bg-card)', padding: '0.6rem 0.75rem', borderRadius: '8px',
+        border: '1px solid var(--border-subtle)', fontSize: '0.7rem', fontFamily: 'var(--font-body)',
+      }}>
+        <div style={{ fontWeight: 600, marginBottom: '0.3rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: '0.6rem' }}>Legend</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <div style={{ width: '10px', height: '10px', borderRadius: '3px', background: '#046bd2', boxShadow: '0 0 6px rgba(4,107,210,0.4)' }} />
+            <span style={{ color: 'var(--text-secondary)' }}>Available Pilot</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <div style={{ width: '10px', height: '10px', borderRadius: '3px', background: '#374151' }} />
+            <span style={{ color: 'var(--text-muted)' }}>Offline</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#06b6d4', border: '1.5px solid white' }} />
+            <span style={{ color: 'var(--text-muted)' }}>You</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Leaflet Map */}
+      <MapContainer
+        center={mapCenter}
+        zoom={5}
+        style={{ flex: 1, width: '100%' }}
+        zoomControl={false}
+        attributionControl={true}
+      >
+        <RecenterMap center={mapCenter} />
+        
+        {/* Dark map tiles */}
+        <TileLayer
+          attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        />
+
+        {/* User location */}
+        {userLocation && (
+          <Marker position={[userLocation.lat, userLocation.lng]} icon={userIcon}>
+            <Popup>
+              <div style={{ fontFamily: 'var(--font-body)', fontWeight: 600 }}>📍 Your Location</div>
+            </Popup>
+          </Marker>
+        )}
+
+        {/* Pilot markers */}
+        {filteredPilots.map(pilot => (
+          <Marker key={pilot.id} position={[pilot.lat, pilot.lng]} icon={pilotIcon(pilot.available)}>
+            <Popup maxWidth={280} minWidth={240}>
+              <div style={{ fontFamily: "'Cabin Condensed', sans-serif", padding: '0.25rem' }}>
+                <div style={{ textAlign: 'center', marginBottom: '0.75rem' }}>
+                  <div style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>🛸</div>
+                  <div style={{ fontWeight: 700, fontSize: '1.05rem', color: '#111827' }}>{pilot.name}</div>
+                  <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+                    <FiMapPin size={12} style={{ verticalAlign: 'middle' }} /> {pilot.city}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '0.75rem', fontSize: '0.85rem' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontWeight: 700, color: '#046bd2' }}>{'⭐'.repeat(Math.round(pilot.rating))}</div>
+                    <div style={{ fontSize: '0.7rem', color: '#9ca3af' }}>{pilot.rating}</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontWeight: 700, color: '#046bd2' }}>${pilot.price}</div>
+                    <div style={{ fontSize: '0.7rem', color: '#9ca3af' }}>Per search</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontWeight: 700, color: pilot.available ? '#10b981' : '#6b7280' }}>
+                      {pilot.available ? '🟢' : '🔴'}
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: '#9ca3af' }}>{pilot.available ? 'Online' : 'Offline'}</div>
+                  </div>
+                </div>
+
+                {pilot.bio && (
+                  <p style={{ fontSize: '0.8rem', color: '#4b5563', lineHeight: 1.4, marginBottom: '0.75rem', textAlign: 'center' }}>
+                    {pilot.bio}
+                  </p>
+                )}
+
+                {pilot.thermal && (
+                  <div style={{ textAlign: 'center', marginBottom: '0.75rem' }}>
+                    <span style={{ background: '#dbeafe', color: '#1e40af', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700 }}>🔥 THERMAL</span>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  {isAuthenticated ? (
+                    <button style={{
+                      flex: 1, padding: '0.5rem', borderRadius: '6px',
+                      background: '#046bd2', color: 'white', border: 'none',
+                      fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer',
+                      fontFamily: "'Cabin Condensed', sans-serif",
+                    }}>
+                      <FiNavigation size={12} style={{ verticalAlign: 'middle' }} /> Contact Pilot
+                    </button>
+                  ) : (
+                    <button onClick={() => navigate('/register')} style={{
+                      flex: 1, padding: '0.5rem', borderRadius: '6px',
+                      background: '#046bd2', color: 'white', border: 'none',
+                      fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer',
+                      fontFamily: "'Cabin Condensed', sans-serif",
+                    }}>
+                      Sign Up to Contact
+                    </button>
+                  )}
+                </div>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+
+        {/* Service radius circles for available pilots */}
+        {filteredPilots.filter(p => p.available).map(pilot => (
+          <Circle
+            key={`circle-${pilot.id}`}
+            center={[pilot.lat, pilot.lng]}
+            radius={pilot.radius ? pilot.radius * 1609.34 : 30000}
+            pathOptions={{
+              color: '#046bd2',
+              fillColor: '#046bd2',
+              fillOpacity: 0.05,
+              weight: 1,
+              dashArray: '4 8',
+            }}
+          />
+        ))}
+      </MapContainer>
 
       {/* Pilot List Bar */}
       <div style={{ background: 'var(--bg-secondary)', borderTop: '1px solid var(--border-subtle)', padding: '0.6rem 1rem', overflowX: 'auto' }}>
@@ -236,24 +270,32 @@ export default function PilotMapPage() {
             <FiSearch size={12} /> {filteredPilots.length}
           </div>
           {filteredPilots.map(pilot => (
-            <div key={pilot.id} onClick={() => setSelectedPilot(pilot)} style={{
+            <button key={pilot.id} onClick={() => setMapCenter([pilot.lat, pilot.lng])} style={{
               display: 'flex', alignItems: 'center', gap: '0.5rem',
               padding: '0.4rem 0.75rem', borderRadius: '6px', cursor: 'pointer',
-              background: selectedPilot?.id === pilot.id ? 'var(--primary-bg)' : 'transparent',
-              border: '1px solid', borderColor: selectedPilot?.id === pilot.id ? 'var(--primary)' : 'var(--border-subtle)',
-              transition: 'all 0.2s',
+              background: 'transparent', border: '1px solid var(--border-subtle)',
+              transition: 'all 0.2s', color: 'var(--text-secondary)',
+              fontFamily: 'var(--font-body)', fontSize: '0.8rem',
             }}>
-              <div style={{ width: '24px', height: '24px', borderRadius: '4px', background: pilot.available ? 'var(--primary-bg)' : 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.6rem', color: pilot.available ? 'var(--primary)' : 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                {getInitials(pilot.name)}
-              </div>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: '0.75rem' }}>{pilot.name}</div>
-                <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{pilot.city}</div>
-              </div>
-            </div>
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: pilot.available ? '#046bd2' : '#6b7280', boxShadow: pilot.available ? '0 0 6px rgba(4,107,210,0.4)' : 'none' }} />
+              <span style={{ fontWeight: 600 }}>{pilot.name}</span>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', fontFamily: 'var(--font-mono)' }}>{pilot.city.split(',')[0]}</span>
+            </button>
           ))}
         </div>
       </div>
+
+      {/* Leaflet CSS override for dark theme */}
+      <style>{`
+        .leaflet-container { background: #060a13 !important; }
+        .leaflet-control-attribution { background: rgba(17,26,46,0.9) !important; color: #64748b !important; font-size: 0.6rem !important; border-radius: 4px 0 0 0 !important; }
+        .leaflet-control-attribution a { color: #046bd2 !important; }
+        .leaflet-popup-content-wrapper { background: #111a2e !important; color: #f1f5f9 !important; border-radius: 12px !important; border: 1px solid #253352 !important; box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important; }
+        .leaflet-popup-tip { background: #111a2e !important; border: 1px solid #253352 !important; }
+        .leaflet-popup-close-button { color: #94a3b8 !important; }
+        .leaflet-popup-close-button:hover { color: #f1f5f9 !important; }
+        .custom-pilot-icon, .custom-user-icon { background: none !important; border: none !important; }
+      `}</style>
     </div>
   );
 }
