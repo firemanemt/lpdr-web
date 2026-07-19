@@ -85,7 +85,7 @@ body {
 
 .app-content {
   flex: 1;
-  padding-bottom: 70px; /* bottom nav height */
+  padding-bottom: calc(70px + env(safe-area-inset-bottom));
   overflow-y: auto;
 }
 
@@ -105,6 +105,9 @@ body {
   z-index: 1000;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+  /* iPhone safe area - home indicator */
+  padding-bottom: env(safe-area-inset-bottom);
+  height: calc(64px + env(safe-area-inset-bottom));
 }
 
 .bottom-nav-item {
@@ -169,6 +172,9 @@ body {
   z-index: 100;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+  /* iPhone safe area - Dynamic Island / notch */
+  padding-top: env(safe-area-inset-top);
+  height: calc(56px + env(safe-area-inset-top));
 }
 
 .top-bar-logo {
