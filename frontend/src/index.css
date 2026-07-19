@@ -1,6 +1,6 @@
 /* ========== LPDR - Global Styles ========== */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Cabin+Condensed:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 * {
   margin: 0;
@@ -9,12 +9,13 @@
 }
 
 :root {
-  --primary: #059669;
-  --primary-dark: #047857;
-  --primary-light: #10b981;
-  --primary-bg: #ecfdf5;
-  --accent: #f59e0b;
-  --accent-dark: #d97706;
+  --primary: #046bd2;
+  --primary-dark: #045cb4;
+  --primary-light: #3b8de0;
+  --primary-bg: #e8f2fc;
+  --accent: #fa9118;
+  --accent-dark: #e07c0a;
+  --accent-light: #ffbe5c;
   --danger: #ef4444;
   --gray-50: #f9fafb;
   --gray-100: #f3f4f6;
@@ -29,10 +30,12 @@
   --radius: 12px;
   --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
   --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+  --font-display: 'Black Ops One', cursive;
+  --font-body: 'Cabin Condensed', 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-body);
   background: var(--gray-50);
   color: var(--gray-900);
   line-height: 1.6;
@@ -208,7 +211,7 @@ body {
   letter-spacing: 0.05em;
 }
 
-.badge-green { background: #d1fae5; color: #065f46; }
+.badge-green { background: #dbeafe; color: #1e40af; }
 .badge-yellow { background: #fef3c7; color: #92400e; }
 .badge-blue { background: #dbeafe; color: #1e40af; }
 .badge-red { background: #fee2e2; color: #991b1b; }
@@ -380,6 +383,8 @@ body {
   font-size: 1.2rem;
   color: var(--primary);
   text-decoration: none;
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
 }
 
 .app-logo img {
@@ -421,12 +426,13 @@ body {
   color: var(--primary);
   font-weight: 700;
   font-size: 0.9rem;
+  font-family: var(--font-display);
 }
 
 /* ========== Page Layout ========== */
 
 .page-header {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, #045cb4 100%);
   color: white;
   padding: 3rem 0;
 }
@@ -504,7 +510,7 @@ body {
 /* ========== Hero Section ========== */
 
 .hero {
-  background: linear-gradient(135deg, #059669 0%, #047857 50%, #065f46 100%);
+  background: linear-gradient(135deg, #046bd2 0%, #045cb4 50%, #034a99 100%);
   color: white;
   padding: 6rem 0;
   text-align: center;
@@ -525,6 +531,8 @@ body {
   font-weight: 800;
   margin-bottom: 1rem;
   position: relative;
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
 }
 
 .hero p {
@@ -568,6 +576,7 @@ body {
   font-weight: 800;
   font-size: 1.25rem;
   margin: 0 auto 1rem;
+  font-family: var(--font-display);
 }
 
 .step h3 {
@@ -674,7 +683,7 @@ body {
 
 /* Welcome banner */
 .welcome-banner {
-  background: linear-gradient(135deg, var(--primary) 0%, #0d9488 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, #045cb4 100%);
   color: white;
   padding: 2rem;
   border-radius: var(--radius);
@@ -728,6 +737,7 @@ body {
   font-size: 1.3rem;
   color: var(--primary);
   flex-shrink: 0;
+  font-family: var(--font-display);
 }
 
 .pilot-info h4 {

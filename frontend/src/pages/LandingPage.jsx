@@ -6,7 +6,7 @@ export default function LandingPage() {
   const { isAuthenticated, isPetOwner } = useAuth();
 
   const stats = [
-    { value: '260+', label: 'Cases Received' },
+    { value: '130+', label: 'Cases Received' },
     { value: '50+', label: 'Active Pilots' },
     { value: '85%', label: 'Recovery Rate' },
     { value: '48hrs', label: 'Avg Response Time' },
@@ -23,41 +23,44 @@ export default function LandingPage() {
     <div>
       {/* Hero Section */}
       <section className="hero">
-        <h1>Lost Pet? We've Got<br />Eyes In The Sky</h1>
-        <p>Connect instantly with drone pilots in your area who are ready to help find your lost pet using thermal technology.</p>
-        <div className="hero-buttons">
-          {isAuthenticated && isPetOwner ? (
-            <Link to="/cases/new" className="btn btn-accent btn-lg">
-              <FiSearch size={20} />
-              Report a Lost Pet
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <img src="/lpdr-logo.png" alt="LPDR" style={{ height: '80px', margin: '0 auto 1.5rem', display: 'block', filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.3))' }} />
+          <h1>Lost Pet? We've Got<br />Eyes In The Sky</h1>
+          <p>Connect instantly with drone pilots in your area who are ready to help find your lost pet using thermal technology.</p>
+          <div className="hero-buttons">
+            {isAuthenticated && isPetOwner ? (
+              <Link to="/cases/new" className="btn btn-accent btn-lg">
+                <FiSearch size={20} />
+                Report a Lost Pet
+              </Link>
+            ) : (
+              <Link to="/register" className="btn btn-accent btn-lg">
+                <FiSearch size={20} />
+                Help Me Find My Pet!
+              </Link>
+            )}
+            <Link to="/map" className="btn btn-lg" style={{
+              background: 'rgba(255,255,255,0.15)',
+              color: 'white',
+              border: '2px solid rgba(255,255,255,0.3)',
+            }}>
+              <FiMapPin size={20} />
+              Find a Drone Pilot
             </Link>
-          ) : (
-            <Link to="/register" className="btn btn-accent btn-lg">
-              <FiSearch size={20} />
-              Help Me Find My Pet!
-            </Link>
-          )}
-          <Link to="/map" className="btn btn-lg" style={{
-            background: 'rgba(255,255,255,0.15)',
-            color: 'white',
-            border: '2px solid rgba(255,255,255,0.3)',
-          }}>
-            <FiMapPin size={20} />
-            Find a Drone Pilot
-          </Link>
-        </div>
+          </div>
 
-        <div style={{ marginTop: '3rem' }}>
-          <p style={{ fontSize: '0.9rem', opacity: 0.7, marginBottom: '1rem' }}>
-            Trusted by hundreds of pet owners nationwide
-          </p>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', flexWrap: 'wrap' }}>
-            {stats.map((s, i) => (
-              <div key={i} style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '2rem', fontWeight: 800 }}>{s.value}</div>
-                <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>{s.label}</div>
-              </div>
-            ))}
+          <div style={{ marginTop: '3rem' }}>
+            <p style={{ fontSize: '0.9rem', opacity: 0.7, marginBottom: '1rem' }}>
+              Trusted by hundreds of pet owners nationwide
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', flexWrap: 'wrap' }}>
+              {stats.map((s, i) => (
+                <div key={i} style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '2rem', fontWeight: 800, fontFamily: 'var(--font-display)' }}>{s.value}</div>
+                  <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -65,7 +68,7 @@ export default function LandingPage() {
       {/* How It Works */}
       <section className="section">
         <div className="container">
-          <h2 style={{ textAlign: 'center', fontSize: '2rem', marginBottom: '0.5rem' }}>How We Help You</h2>
+          <h2 style={{ textAlign: 'center', fontSize: '2rem', marginBottom: '0.5rem', fontFamily: 'var(--font-display)', color: 'var(--gray-800)' }}>How We Help You</h2>
           <p style={{ textAlign: 'center', color: 'var(--gray-500)', maxWidth: '600px', margin: '0 auto 3rem', fontSize: '1.05rem' }}>
             When your pet goes missing, every second counts. That's why Lost Pet Drone Recovery makes it simple.
           </p>
@@ -85,21 +88,21 @@ export default function LandingPage() {
       <section className="section" style={{ background: 'var(--gray-100)' }}>
         <div className="container">
           <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <h2 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Our Interactive Map Shows Pilots Near You</h2>
+            <h2 style={{ fontSize: '2rem', marginBottom: '0.5rem', fontFamily: 'var(--font-display)', color: 'var(--gray-800)' }}>Our Interactive Map Shows Pilots Near You</h2>
             <p style={{ color: 'var(--gray-500)', maxWidth: '600px', margin: '0 auto' }}>
               Need help fast? Our live interactive map shows trained drone pilots ready to respond in your area.
             </p>
           </div>
           
-          <div className="card" style={{ height: '400px', background: 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+          <div className="card" style={{ height: '400px', background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
             {/* Simplified map illustration */}
             <div style={{ position: 'relative', width: '100%', height: '100%' }}>
               {/* Grid lines */}
               {[20, 40, 60, 80].map((p, i) => (
-                <div key={`h${i}`} style={{ position: 'absolute', left: 0, right: 0, top: `${p}%`, height: '1px', background: 'rgba(5, 150, 105, 0.2)' }} />
+                <div key={`h${i}`} style={{ position: 'absolute', left: 0, right: 0, top: `${p}%`, height: '1px', background: 'rgba(4, 107, 210, 0.15)' }} />
               ))}
               {[20, 40, 60, 80].map((p, i) => (
-                <div key={`v${i}`} style={{ position: 'absolute', top: 0, bottom: 0, left: `${p}%`, width: '1px', background: 'rgba(5, 150, 105, 0.2)' }} />
+                <div key={`v${i}`} style={{ position: 'absolute', top: 0, bottom: 0, left: `${p}%`, width: '1px', background: 'rgba(4, 107, 210, 0.15)' }} />
               ))}
               
               {/* Dots representing pilots */}
@@ -118,8 +121,8 @@ export default function LandingPage() {
                   width: '20px',
                   height: '20px',
                   borderRadius: '50%',
-                  background: dot.pulse ? '#059669' : '#9ca3af',
-                  boxShadow: dot.pulse ? '0 0 0 4px rgba(5, 150, 105, 0.2)' : 'none',
+                  background: dot.pulse ? '#046bd2' : '#9ca3af',
+                  boxShadow: dot.pulse ? '0 0 0 4px rgba(4, 107, 210, 0.2)' : 'none',
                   transform: 'translate(-50%, -50%)',
                   animation: dot.pulse ? 'pulse 2s ease-in-out infinite' : 'none',
                   cursor: 'pointer',
@@ -130,7 +133,7 @@ export default function LandingPage() {
               {/* Labels */}
               <div style={{ position: 'absolute', bottom: '1rem', left: '1rem', background: 'white', padding: '0.75rem 1rem', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', fontSize: '0.9rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
-                  <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#059669' }} />
+                  <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#046bd2' }} />
                   <span>Available Pilot</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -153,7 +156,7 @@ export default function LandingPage() {
       {/* Testimonials */}
       <section className="section">
         <div className="container">
-          <h2 style={{ textAlign: 'center', fontSize: '2rem', marginBottom: '0.5rem' }}>Recently Reunited Families</h2>
+          <h2 style={{ textAlign: 'center', fontSize: '2rem', marginBottom: '0.5rem', fontFamily: 'var(--font-display)', color: 'var(--gray-800)' }}>Recently Reunited Families</h2>
           <p style={{ textAlign: 'center', color: 'var(--gray-500)', marginBottom: '3rem' }}>
             Behind every case is a real story, a scared pet, a worried family, and a reunion.
           </p>
@@ -185,18 +188,18 @@ export default function LandingPage() {
 
       {/* CTA */}
       <section className="section" style={{
-        background: 'linear-gradient(135deg, var(--primary) 0%, #0d9488 100%)',
+        background: 'linear-gradient(135deg, var(--primary) 0%, #045cb4 100%)',
         color: 'white',
         textAlign: 'center',
       }}>
         <div className="container">
-          <h2 style={{ fontSize: '2rem', marginBottom: '1rem' }}>Join Our Nationwide Movement</h2>
+          <h2 style={{ fontSize: '2rem', marginBottom: '1rem', fontFamily: 'var(--font-display)' }}>Join Our Nationwide Movement</h2>
           <p style={{ maxWidth: '600px', margin: '0 auto 2rem', opacity: 0.9, fontSize: '1.1rem' }}>
             So many drone pilots across the country are stepping up to help families find their lost pets. 
             There's a role for everyone in this mission.
           </p>
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link to="/register?role=drone_pilot" className="btn btn-lg" style={{ background: 'white', color: 'var(--primary)', fontWeight: 700 }}>
+            <Link to="/register?role=drone_pilot" className="btn btn-lg" style={{ background: 'var(--accent)', color: 'white', fontWeight: 700 }}>
               <FiUsers size={20} />
               Sign Up As a Pilot
             </Link>

@@ -67,12 +67,8 @@ export default function RegisterPage() {
       <div className="card" style={{ width: '100%', maxWidth: '520px' }}>
         <div className="card-body" style={{ padding: '2.5rem' }}>
           <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <svg width="48" height="48" viewBox="0 0 40 40" fill="none" style={{ margin: '0 auto 1rem' }}>
-              <rect width="40" height="40" rx="10" fill="#059669"/>
-              <path d="M20 8C16 8 12 12 12 18C12 24 20 32 20 32C20 32 28 24 28 18C28 12 24 8 20 8Z" fill="white" opacity="0.9"/>
-              <path d="M20 14C22 14 24 16 24 18C24 22 20 26 20 26C20 26 16 22 16 18C16 16 18 14 20 14Z" fill="#059669"/>
-            </svg>
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.25rem' }}>Create Your Account</h1>
+            <img src="/lpdr-logo.png" alt="LPDR" style={{ height: '64px', margin: '0 auto 1rem', display: 'block' }} />
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.25rem', fontFamily: 'var(--font-display)', color: 'var(--primary)' }}>Create Your Account</h1>
             <p style={{ color: 'var(--gray-500)', fontSize: '0.95rem' }}>Join the LPDR community</p>
           </div>
 

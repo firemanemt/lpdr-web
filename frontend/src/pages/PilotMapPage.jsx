@@ -77,14 +77,14 @@ export default function PilotMapPage() {
   return (
     <div style={{ minHeight: 'calc(100vh - 70px)', display: 'flex', flexDirection: 'column' }}>
       {/* Map Area */}
-      <div style={{ flex: 1, position: 'relative', background: 'linear-gradient(180deg, #ecfdf5 0%, #d1fae5 50%, #a7f3d0 100%)', minHeight: '500px' }}>
+      <div style={{ flex: 1, position: 'relative', background: 'linear-gradient(180deg, #dbeafe 0%, #bfdbfe 50%, #93c5fd 100%)', minHeight: '500px' }}>
         {/* Map Grid */}
         <div style={{ position: 'absolute', inset: 0, opacity: 0.15 }}>
           {Array.from({ length: 10 }).map((_, i) => (
-            <div key={`h${i}`} style={{ position: 'absolute', left: 0, right: 0, top: `${i * 10}%`, height: '1px', background: '#059669' }} />
+            <div key={`h${i}`} style={{ position: 'absolute', left: 0, right: 0, top: `${i * 10}%`, height: '1px', background: '#046bd2' }} />
           ))}
           {Array.from({ length: 10 }).map((_, i) => (
-            <div key={`v${i}`} style={{ position: 'absolute', top: 0, bottom: 0, left: `${i * 10}%`, width: '1px', background: '#059669' }} />
+            <div key={`v${i}`} style={{ position: 'absolute', top: 0, bottom: 0, left: `${i * 10}%`, width: '1px', background: '#046bd2' }} />
           ))}
         </div>
 
@@ -131,9 +131,9 @@ export default function PilotMapPage() {
               <div style={{
                 width: '40px', height: '40px',
                 borderRadius: '50%',
-                background: pilot.available ? '#059669' : '#9ca3af',
+                background: pilot.available ? '#046bd2' : '#9ca3af',
                 border: '3px solid white',
-                boxShadow: `0 2px 8px rgba(0,0,0,0.2)${pilot.available ? ', 0 0 0 4px rgba(5,150,105,0.2)' : ''}`,
+                boxShadow: `0 2px 8px rgba(0,0,0,0.2)${pilot.available ? ', 0 0 0 4px rgba(4,107,210,0.2)' : ''}`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -180,7 +180,7 @@ export default function PilotMapPage() {
             left: `${s.left}%`,
             top: `${s.top}%`,
             fontSize: '0.6rem',
-            color: 'rgba(5,150,105,0.3)',
+            color: 'rgba(4,107,210,0.3)',
             fontWeight: 700,
             letterSpacing: '0.1em',
             pointerEvents: 'none',
@@ -204,7 +204,7 @@ export default function PilotMapPage() {
           <div style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Legend</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: '#059669' }} />
+              <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: '#046bd2' }} />
               <span>Available Pilot</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

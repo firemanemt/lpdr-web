@@ -29,13 +29,7 @@ export default function Layout() {
       <header className="app-header">
         <div className="container">
           <Link to="/" className="app-logo">
-            <svg width="36" height="36" viewBox="0 0 40 40" fill="none">
-              <rect width="40" height="40" rx="10" fill="#059669"/>
-              <path d="M20 8C16 8 12 12 12 18C12 24 20 32 20 32C20 32 28 24 28 18C28 12 24 8 20 8Z" fill="white" opacity="0.9"/>
-              <path d="M20 14C22 14 24 16 24 18C24 22 20 26 20 26C20 26 16 22 16 18C16 16 18 14 20 14Z" fill="#059669"/>
-              <circle cx="30" cy="10" r="6" fill="#f59e0b"/>
-              <path d="M29 8L29 12M27 10L31 10" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
+            <img src="/lpdr-logo.png" alt="LPDR" style={{ height: '44px' }} />
             <span>LPDR</span>
           </Link>
 
@@ -92,7 +86,10 @@ export default function Layout() {
             marginBottom: '2rem',
           }}>
             <div>
-              <h4 style={{ color: 'white', marginBottom: '0.75rem' }}>Lost Pet Drone Recovery</h4>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                <img src="/lpdr-logo.png" alt="LPDR" style={{ height: '36px' }} />
+                <span style={{ color: 'white', fontWeight: 800, fontSize: '1.1rem', fontFamily: 'var(--font-display)' }}>LPDR</span>
+              </div>
               <p style={{ fontSize: '0.9rem', lineHeight: 1.6 }}>
                 Connecting pet owners with drone pilots to find lost pets. 
                 Lost pets. Found faster.
@@ -111,7 +108,7 @@ export default function Layout() {
               <h4 style={{ color: 'white', marginBottom: '0.75rem' }}>Contact</h4>
               <p style={{ fontSize: '0.9rem' }}>
                 Based in Oneonta, NY<br />
-                <a href="mailto:support@lostpetdronerecovery.com" style={{ color: '#10b981', textDecoration: 'none' }}>
+                <a href="mailto:support@lostpetdronerecovery.com" style={{ color: '#046bd2', textDecoration: 'none' }}>
                   support@lostpetdronerecovery.com
                 </a>
               </p>
