@@ -1,14 +1,18 @@
 export default function LoadingSpinner({ size = 'md', text = 'Loading...' }) {
-  const sizes = {
-    sm: 'h-6 w-6 border-2',
-    md: 'h-10 w-10 border-3',
-    lg: 'h-16 w-16 border-4',
-  };
+  const sizes = { sm: 24, md: 40, lg: 56 };
 
   return (
-    <div className="flex flex-col items-center justify-center py-12">
-      <div className={`${sizes[size]} rounded-full border-gray-300 border-t-emerald-500 animate-spin mb-4`} />
-      {text && <p className="text-gray-500 text-sm">{text}</p>}
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '3rem 1rem' }}>
+      <div style={{
+        width: sizes[size], height: sizes[size],
+        border: '3px solid var(--border-default)',
+        borderTopColor: 'var(--primary)',
+        borderRadius: '50%',
+        animation: 'spin 0.8s linear infinite',
+        marginBottom: '1rem',
+      }} />
+      {text && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{text}</p>}
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

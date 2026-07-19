@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
+import { FiLock, FiUser } from 'react-icons/fi';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('owner@demo.com');
@@ -57,64 +58,74 @@ export default function LoginPage() {
   };
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 200px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem' }}>
-      <div className="card" style={{ width: '100%', maxWidth: '440px' }}>
-        <div className="card-body" style={{ padding: '2.5rem' }}>
-          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <img src="/lpdr-logo.png" alt="LPDR" style={{ height: '64px', margin: '0 auto 1rem', display: 'block' }} />
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.25rem', fontFamily: 'var(--font-display)', color: 'var(--primary)' }}>Welcome Back</h1>
-            <p style={{ color: 'var(--gray-500)', fontSize: '0.95rem' }}>Sign in to your account</p>
-          </div>
-
-          <form onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label className="form-label">Email</label>
-              <input
-                type="email"
-                className={`form-input ${errors.email ? 'error' : ''}`}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-              />
-              {errors.email && <div className="form-error">{errors.email}</div>}
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Password</label>
-              <input
-                type="password"
-                className={`form-input ${errors.password ? 'error' : ''}`}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Your password"
-              />
-              {errors.password && <div className="form-error">{errors.password}</div>}
-            </div>
-
-            <button type="submit" className="btn btn-primary btn-lg" style={{ width: '100%' }} disabled={loading}>
-              {loading ? 'Signing in...' : 'Sign In'}
-            </button>
-          </form>
-
-          {/* Demo Quick Logins */}
-          <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--gray-200)' }}>
-            <p style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--gray-500)', marginBottom: '0.75rem' }}>
-              Quick Demo Access
-            </p>
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button onClick={() => quickLogin('owner')} className="btn btn-secondary btn-sm" style={{ flex: 1 }} disabled={loading}>
-                Pet Owner Demo
-              </button>
-              <button onClick={() => quickLogin('pilot')} className="btn btn-secondary btn-sm" style={{ flex: 1 }} disabled={loading}>
-                Drone Pilot Demo
-              </button>
-            </div>
-          </div>
-
-          <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.9rem', color: 'var(--gray-500)' }}>
-            Don't have an account? <Link to="/register" style={{ color: 'var(--primary)', fontWeight: 600 }}>Sign up</Link>
-          </p>
+    <div style={{ minHeight: 'calc(100vh - 120px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem 1rem' }}>
+      <div style={{ width: '100%', maxWidth: '400px' }}>
+        {/* Logo & Header */}
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          <img src="/lpdr-logo.png" alt="LPDR" style={{ height: '56px', margin: '0 auto 1rem', display: 'block', filter: 'drop-shadow(0 0 16px rgba(4,107,210,0.4))' }} />
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: 'var(--text-primary)', marginBottom: '0.25rem' }}>AUTHENTICATION</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Sign in to access the system</p>
         </div>
+
+        {/* Login Form */}
+        <div className="card">
+          <div className="card-body" style={{ padding: '1.5rem' }}>
+            <form onSubmit={handleSubmit}>
+              <div className="form-group">
+                <label className="form-label">
+                  <FiUser size={12} style={{ verticalAlign: 'middle', marginRight: '0.3rem' }} />
+                  Email
+                </label>
+                <input
+                  type="email"
+                  className={`form-input ${errors.email ? 'error' : ''}`}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                />
+                {errors.email && <div className="form-error">{errors.email}</div>}
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">
+                  <FiLock size={12} style={{ verticalAlign: 'middle', marginRight: '0.3rem' }} />
+                  Password
+                </label>
+                <input
+                  type="password"
+                  className={`form-input ${errors.password ? 'error' : ''}`}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Your password"
+                />
+                {errors.password && <div className="form-error">{errors.password}</div>}
+              </div>
+
+              <button type="submit" className="btn btn-primary btn-lg" style={{ width: '100%' }} disabled={loading}>
+                {loading ? 'Authenticating...' : 'Sign In'}
+              </button>
+            </form>
+          </div>
+        </div>
+
+        {/* Demo Quick Logins */}
+        <div style={{ marginTop: '1rem' }}>
+          <div className="section-title" style={{ marginBottom: '0.5rem' }}>
+            Quick Demo Access
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button onClick={() => quickLogin('owner')} className="btn btn-secondary btn-sm" style={{ flex: 1 }} disabled={loading}>
+              🐾 Pet Owner
+            </button>
+            <button onClick={() => quickLogin('pilot')} className="btn btn-secondary btn-sm" style={{ flex: 1 }} disabled={loading}>
+              🛸 Drone Pilot
+            </button>
+          </div>
+        </div>
+
+        <p style={{ textAlign: 'center', marginTop: '1.25rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+          Don't have an account? <Link to="/register" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>Sign up</Link>
+        </p>
       </div>
     </div>
   );

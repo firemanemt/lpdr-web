@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
+import { FiUser, FiMail, FiLock, FiPhone } from 'react-icons/fi';
 
 export default function RegisterPage() {
   const [searchParams] = useSearchParams();
@@ -63,145 +64,121 @@ export default function RegisterPage() {
   };
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 200px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem' }}>
-      <div className="card" style={{ width: '100%', maxWidth: '520px' }}>
-        <div className="card-body" style={{ padding: '2.5rem' }}>
-          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <img src="/lpdr-logo.png" alt="LPDR" style={{ height: '64px', margin: '0 auto 1rem', display: 'block' }} />
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.25rem', fontFamily: 'var(--font-display)', color: 'var(--primary)' }}>Create Your Account</h1>
-            <p style={{ color: 'var(--gray-500)', fontSize: '0.95rem' }}>Join the LPDR community</p>
-          </div>
-
-          {/* Role Toggle */}
-          <div style={{ display: 'flex', marginBottom: '2rem', border: '2px solid var(--gray-200)', borderRadius: '12px', overflow: 'hidden' }}>
-            <button
-              style={{
-                flex: 1,
-                padding: '0.75rem',
-                background: form.role === 'pet_owner' ? 'var(--primary)' : 'white',
-                color: form.role === 'pet_owner' ? 'white' : 'var(--gray-600)',
-                border: 'none',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-              }}
-              onClick={() => updateField('role', 'pet_owner')}
-            >
-              🐾 Pet Owner
-            </button>
-            <button
-              style={{
-                flex: 1,
-                padding: '0.75rem',
-                background: form.role === 'drone_pilot' ? 'var(--primary)' : 'white',
-                color: form.role === 'drone_pilot' ? 'white' : 'var(--gray-600)',
-                border: 'none',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-              }}
-              onClick={() => updateField('role', 'drone_pilot')}
-            >
-              🛸 Drone Pilot
-            </button>
-          </div>
-
-          <form onSubmit={handleSubmit}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div className="form-group">
-                <label className="form-label">First Name *</label>
-                <input
-                  type="text"
-                  className={`form-input ${errors.firstName ? 'error' : ''}`}
-                  value={form.firstName}
-                  onChange={(e) => updateField('firstName', e.target.value)}
-                  placeholder="John"
-                />
-                {errors.firstName && <div className="form-error">{errors.firstName}</div>}
-              </div>
-              <div className="form-group">
-                <label className="form-label">Last Name *</label>
-                <input
-                  type="text"
-                  className={`form-input ${errors.lastName ? 'error' : ''}`}
-                  value={form.lastName}
-                  onChange={(e) => updateField('lastName', e.target.value)}
-                  placeholder="Doe"
-                />
-                {errors.lastName && <div className="form-error">{errors.lastName}</div>}
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Email *</label>
-              <input
-                type="email"
-                className={`form-input ${errors.email ? 'error' : ''}`}
-                value={form.email}
-                onChange={(e) => updateField('email', e.target.value)}
-                placeholder="you@example.com"
-              />
-              {errors.email && <div className="form-error">{errors.email}</div>}
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Phone</label>
-              <input
-                type="tel"
-                className="form-input"
-                value={form.phone}
-                onChange={(e) => updateField('phone', e.target.value)}
-                placeholder="(555) 123-4567"
-              />
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div className="form-group">
-                <label className="form-label">Password *</label>
-                <input
-                  type="password"
-                  className={`form-input ${errors.password ? 'error' : ''}`}
-                  value={form.password}
-                  onChange={(e) => updateField('password', e.target.value)}
-                  placeholder="Min 6 characters"
-                />
-                {errors.password && <div className="form-error">{errors.password}</div>}
-              </div>
-              <div className="form-group">
-                <label className="form-label">Confirm Password *</label>
-                <input
-                  type="password"
-                  className={`form-input ${errors.confirmPassword ? 'error' : ''}`}
-                  value={form.confirmPassword}
-                  onChange={(e) => updateField('confirmPassword', e.target.value)}
-                  placeholder="Confirm password"
-                />
-                {errors.confirmPassword && <div className="form-error">{errors.confirmPassword}</div>}
-              </div>
-            </div>
-
-            {form.role === 'drone_pilot' && (
-              <div style={{
-                background: 'var(--primary-bg)',
-                padding: '1rem',
-                borderRadius: '8px',
-                marginBottom: '1rem',
-                fontSize: '0.9rem',
-                color: 'var(--gray-700)',
-              }}>
-                <strong>📋 Pilot account:</strong> After registering, you'll set up your pilot profile including equipment, service area, and pricing. Pilot accounts require a membership plan to appear on the map.
-              </div>
-            )}
-
-            <button type="submit" className="btn btn-primary btn-lg" style={{ width: '100%' }} disabled={loading}>
-              {loading ? 'Creating Account...' : `Create ${form.role === 'drone_pilot' ? 'Pilot' : 'Pet Owner'} Account`}
-            </button>
-          </form>
-
-          <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.9rem', color: 'var(--gray-500)' }}>
-            Already have an account? <Link to="/login" style={{ color: 'var(--primary)', fontWeight: 600 }}>Sign in</Link>
-          </p>
+    <div style={{ minHeight: 'calc(100vh - 120px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem 1rem' }}>
+      <div style={{ width: '100%', maxWidth: '440px' }}>
+        {/* Header */}
+        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+          <img src="/lpdr-logo.png" alt="LPDR" style={{ height: '56px', margin: '0 auto 1rem', display: 'block', filter: 'drop-shadow(0 0 16px rgba(4,107,210,0.4))' }} />
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: 'var(--text-primary)', marginBottom: '0.25rem' }}>ENROLLMENT</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Join the LPDR network</p>
         </div>
+
+        {/* Role Toggle */}
+        <div style={{ display: 'flex', marginBottom: '1rem', border: '1px solid var(--border-default)', borderRadius: '8px', overflow: 'hidden' }}>
+          <button
+            style={{
+              flex: 1,
+              padding: '0.65rem',
+              background: form.role === 'pet_owner' ? 'var(--primary-bg)' : 'var(--bg-card)',
+              color: form.role === 'pet_owner' ? 'var(--primary)' : 'var(--text-muted)',
+              border: 'none',
+              borderRight: '1px solid var(--border-default)',
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontSize: '0.85rem',
+              fontFamily: 'var(--font-body)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+            }}
+            onClick={() => updateField('role', 'pet_owner')}
+          >
+            🐾 Pet Owner
+          </button>
+          <button
+            style={{
+              flex: 1,
+              padding: '0.65rem',
+              background: form.role === 'drone_pilot' ? 'var(--primary-bg)' : 'var(--bg-card)',
+              color: form.role === 'drone_pilot' ? 'var(--primary)' : 'var(--text-muted)',
+              border: 'none',
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontSize: '0.85rem',
+              fontFamily: 'var(--font-body)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+            }}
+            onClick={() => updateField('role', 'drone_pilot')}
+          >
+            🛸 Drone Pilot
+          </button>
+        </div>
+
+        {/* Registration Form */}
+        <div className="card">
+          <div className="card-body" style={{ padding: '1.5rem' }}>
+            <form onSubmit={handleSubmit}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div className="form-group">
+                  <label className="form-label">First Name *</label>
+                  <input type="text" className={`form-input ${errors.firstName ? 'error' : ''}`} value={form.firstName} onChange={(e) => updateField('firstName', e.target.value)} placeholder="John" />
+                  {errors.firstName && <div className="form-error">{errors.firstName}</div>}
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Last Name *</label>
+                  <input type="text" className={`form-input ${errors.lastName ? 'error' : ''}`} value={form.lastName} onChange={(e) => updateField('lastName', e.target.value)} placeholder="Doe" />
+                  {errors.lastName && <div className="form-error">{errors.lastName}</div>}
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label"><FiMail size={11} style={{ verticalAlign: 'middle', marginRight: '0.3rem' }} />Email *</label>
+                <input type="email" className={`form-input ${errors.email ? 'error' : ''}`} value={form.email} onChange={(e) => updateField('email', e.target.value)} placeholder="you@example.com" />
+                {errors.email && <div className="form-error">{errors.email}</div>}
+              </div>
+
+              <div className="form-group">
+                <label className="form-label"><FiPhone size={11} style={{ verticalAlign: 'middle', marginRight: '0.3rem' }} />Phone</label>
+                <input type="tel" className="form-input" value={form.phone} onChange={(e) => updateField('phone', e.target.value)} placeholder="(555) 123-4567" />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div className="form-group">
+                  <label className="form-label"><FiLock size={11} style={{ verticalAlign: 'middle', marginRight: '0.3rem' }} />Password *</label>
+                  <input type="password" className={`form-input ${errors.password ? 'error' : ''}`} value={form.password} onChange={(e) => updateField('password', e.target.value)} placeholder="Min 6 chars" />
+                  {errors.password && <div className="form-error">{errors.password}</div>}
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Confirm *</label>
+                  <input type="password" className={`form-input ${errors.confirmPassword ? 'error' : ''}`} value={form.confirmPassword} onChange={(e) => updateField('confirmPassword', e.target.value)} placeholder="Confirm" />
+                  {errors.confirmPassword && <div className="form-error">{errors.confirmPassword}</div>}
+                </div>
+              </div>
+
+              {form.role === 'drone_pilot' && (
+                <div style={{
+                  background: 'var(--primary-bg)',
+                  border: '1px solid rgba(4,107,210,0.2)',
+                  padding: '0.75rem',
+                  borderRadius: '8px',
+                  marginBottom: '1rem',
+                  fontSize: '0.8rem',
+                  color: 'var(--text-secondary)',
+                }}>
+                  <strong>📋 Pilot account:</strong> After registering, you'll set up your pilot profile including equipment, service area, and pricing.
+                </div>
+              )}
+
+              <button type="submit" className="btn btn-primary btn-lg" style={{ width: '100%' }} disabled={loading}>
+                {loading ? 'Creating Account...' : `Create ${form.role === 'drone_pilot' ? 'Pilot' : 'Pet Owner'} Account`}
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <p style={{ textAlign: 'center', marginTop: '1.25rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+          Already have an account? <Link to="/login" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>Sign in</Link>
+        </p>
       </div>
     </div>
   );
