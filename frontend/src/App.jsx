@@ -17,6 +17,7 @@ import FAQsPage from './pages/FAQsPage';
 import AboutPage from './pages/AboutPage';
 import LiveCasesPage from './pages/LiveCasesPage';
 import LiveCaseDetailPage from './pages/LiveCaseDetailPage';
+import NotFoundPage from './pages/NotFoundPage';
 
 export default function App() {
   return (
@@ -25,12 +26,14 @@ export default function App() {
         <Toaster
           position="top-center"
           toastOptions={{
-            duration: 4000,
+            duration: 3000,
             style: {
-              borderRadius: '12px',
-              background: '#1f2937',
-              color: '#fff',
-              fontSize: '0.9rem',
+              borderRadius: '8px',
+              background: 'var(--bg-elevated)',
+              color: 'var(--text-primary)',
+              fontSize: '0.85rem',
+              border: '1px solid var(--border-default)',
+              fontFamily: 'var(--font-body)',
             },
             success: {
               iconTheme: { primary: '#046bd2', secondary: '#fff' },
@@ -75,6 +78,9 @@ export default function App() {
                 <PilotDashboard />
               </ProtectedRoute>
             } />
+
+            {/* 404 */}
+            <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Routes>
       </AuthProvider>

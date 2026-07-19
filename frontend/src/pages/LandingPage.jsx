@@ -1,5 +1,5 @@
-import { Link } from 'react-router-dom';
-import { FiSearch, FiMapPin, FiUsers, FiHeart, FiChevronRight, FiRadio } from 'react-icons/fi';
+import { Link, useNavigate } from 'react-router-dom';
+import { FiSearch, FiMapPin, FiUsers, FiHeart, FiChevronRight, FiRadio, FiClock } from 'react-icons/fi';
 import { useAuth } from '../contexts/AuthContext';
 import { useState, useEffect } from 'react';
 
@@ -7,11 +7,16 @@ export default function LandingPage() {
   const { isAuthenticated, isPetOwner } = useAuth();
   const [liveStats, setLiveStats] = useState(null);
   const [liveCount, setLiveCount] = useState(null);
+  const [recentCases, setRecentCases] = useState([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Fetch live stats and case count from the website
     fetch('/api/content/stats').then(r => r.json()).then(d => setLiveStats(d)).catch(() => {});
-    fetch('/api/content/live-cases').then(r => r.json()).then(d => setLiveCount(d.total || 0)).catch(() => {});
+    fetch('/api/content/live-cases').then(r => r.json()).then(d => {
+      setLiveCount(d.total || 0);
+      setRecentCases((d.cases || []).slice(0, 3));
+    }).catch(() => {});
   }, []);
 
   const stats = [
@@ -149,6 +154,47 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Recent Lost Pets - LIVE from website */}
+      {recentCases.length > 0 && (
+        <section className="section">
+          <div className="container">
+            <div className="section-title">
+              <FiRadio size={14} style={{ color: 'var(--danger)' }} />
+              <span style={{ color: 'var(--danger)' }}>Live — Recently Reported Lost Pets</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {recentCases.map((c, i) => (
+                <div key={c.id} className="card card-interactive fade-in" style={{ cursor: 'pointer', borderLeft: '3px solid var(--danger)' }} onClick={() => navigate(`/live/${c.id}`)}>
+                  <div style={{ padding: '0.75rem 1rem', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                    {c.photo_thumb ? (
+                      <div style={{ width: '48px', height: '48px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0, border: '1px solid var(--border-subtle)' }}>
+                        <img src={c.photo_thumb} alt={c.pet_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </div>
+                    ) : (
+                      <div style={{ width: '48px', height: '48px', borderRadius: '8px', background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', flexShrink: 0 }}>
+                        {c.pet_type === 'dog' ? '🐕' : c.pet_type === 'cat' ? '🐱' : '🐾'}
+                      </div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{c.pet_name}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                        <FiMapPin size={11} /> {c.last_seen_address || 'Location not specified'}
+                      </div>
+                    </div>
+                    <FiChevronRight size={18} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+              <Link to="/live" className="btn btn-secondary btn-sm">
+                <FiRadio size={14} /> View All Live Cases
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Testimonials */}
       <section className="section">

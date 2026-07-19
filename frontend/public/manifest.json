@@ -1,0 +1,26 @@
+{
+  "name": "LPDR - Lost Pet Drone Recovery",
+  "short_name": "LPDR",
+  "description": "Connect with thermal drone pilots to find lost pets. Eyes in the sky, hope on the ground.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#060a13",
+  "theme_color": "#046bd2",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/lpdr-logo-mockup.png",
+      "sizes": "1120x1120",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["lifestyle", "utilities"],
+  "lang": "en-US",
+  "scope": "/"
+}
