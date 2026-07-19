@@ -1,15 +1,24 @@
 import { Link } from 'react-router-dom';
 import { FiSearch, FiMapPin, FiUsers, FiHeart, FiChevronRight, FiRadio } from 'react-icons/fi';
 import { useAuth } from '../contexts/AuthContext';
+import { useState, useEffect } from 'react';
 
 export default function LandingPage() {
   const { isAuthenticated, isPetOwner } = useAuth();
+  const [liveStats, setLiveStats] = useState(null);
+  const [liveCount, setLiveCount] = useState(null);
+
+  useEffect(() => {
+    // Fetch live stats and case count from the website
+    fetch('/api/content/stats').then(r => r.json()).then(d => setLiveStats(d)).catch(() => {});
+    fetch('/api/content/live-cases').then(r => r.json()).then(d => setLiveCount(d.total || 0)).catch(() => {});
+  }, []);
 
   const stats = [
-    { value: '130+', label: 'Cases', icon: '📋' },
-    { value: '50+', label: 'Pilots', icon: '🛸' },
-    { value: '85%', label: 'Recovery', icon: '✓' },
-    { value: '48hr', label: 'Avg Time', icon: '⏱' },
+    { value: liveStats?.casesReceived || '130+', label: 'Cases', icon: '📋' },
+    { value: liveStats?.activePilots || '50+', label: 'Pilots', icon: '🛸' },
+    { value: liveStats?.recoveryRate || '85%', label: 'Recovery', icon: '✓' },
+    { value: liveStats?.avgResponseTime || '48hr', label: 'Avg Time', icon: '⏱' },
   ];
 
   const steps = [
@@ -54,6 +63,13 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
+
+          {/* Live Feed Link */}
+          {liveCount > 0 && (
+            <Link to="/live" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginTop: '1rem', color: 'var(--danger)', fontWeight: 600, fontSize: '0.85rem', textDecoration: 'none' }}>
+              <FiRadio size={14} /> {liveCount} active cases on live feed →
+            </Link>
+          )}
         </div>
       </section>
 

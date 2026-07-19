@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { FiHome, FiMapPin, FiPlusCircle, FiUser, FiLogOut, FiMenu, FiX, FiMessageSquare, FiSearch, FiBell } from 'react-icons/fi';
+import { FiHome, FiMapPin, FiPlusCircle, FiUser, FiLogOut, FiMenu, FiX, FiMessageSquare, FiSearch, FiBell, FiRadio } from 'react-icons/fi';
 
 export default function Layout() {
   const { user, isAuthenticated, logout, isPetOwner, isDronePilot } = useAuth();
@@ -72,9 +72,9 @@ export default function Layout() {
             <FiHome size={20} />
             Home
           </Link>
-          <Link to="/map" className={`bottom-nav-item ${isActive('/map') ? 'active' : ''}`}>
-            <FiMapPin size={20} />
-            Map
+          <Link to="/live" className={`bottom-nav-item ${isActive('/live') ? 'active' : ''}`}>
+            <FiRadio size={20} />
+            Live
           </Link>
           {isPetOwner && (
             <Link to="/cases/new" className={`bottom-nav-item ${isActive('/cases/new') ? 'active' : ''}`}>
@@ -83,14 +83,14 @@ export default function Layout() {
             </Link>
           )}
           {!isPetOwner && (
-            <Link to="/map" className={`bottom-nav-item ${isActive('/cases') ? 'active' : ''}`}>
-              <FiSearch size={20} />
-              Cases
+            <Link to="/map" className={`bottom-nav-item ${isActive('/map') ? 'active' : ''}`}>
+              <FiMapPin size={20} />
+              Map
             </Link>
           )}
-          <Link to="/faqs" className={`bottom-nav-item ${isActive('/faqs') ? 'active' : ''}`}>
-            <FiMessageSquare size={20} />
-            Help
+          <Link to="/map" className={`bottom-nav-item ${isActive('/map') && !isPetOwner ? '' : isActive('/map') ? 'active' : ''}`}>
+            <FiMapPin size={20} />
+            Map
           </Link>
           <button onClick={handleLogout} className="bottom-nav-item">
             <FiLogOut size={20} />
@@ -103,6 +103,10 @@ export default function Layout() {
             <FiHome size={20} />
             Home
           </Link>
+          <Link to="/live" className={`bottom-nav-item ${isActive('/live') ? 'active' : ''}`}>
+            <FiRadio size={20} />
+            Live
+          </Link>
           <Link to="/map" className={`bottom-nav-item ${isActive('/map') ? 'active' : ''}`}>
             <FiMapPin size={20} />
             Map
@@ -110,10 +114,6 @@ export default function Layout() {
           <Link to="/about" className={`bottom-nav-item ${isActive('/about') ? 'active' : ''}`}>
             <FiSearch size={20} />
             About
-          </Link>
-          <Link to="/faqs" className={`bottom-nav-item ${isActive('/faqs') ? 'active' : ''}`}>
-            <FiMessageSquare size={20} />
-            FAQs
           </Link>
           <Link to="/login" className={`bottom-nav-item ${isActive('/login') ? 'active' : ''}`}>
             <FiUser size={20} />
