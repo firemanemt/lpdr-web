@@ -20,7 +20,7 @@ export default function LandingPage() {
   }, []);
 
   const stats = [
-    { value: liveStats?.casesReceived || '130+', label: 'Cases', icon: '📋' },
+    { value: liveStats?.casesReceived || '501', label: 'Cases', icon: '📋', live: !!liveStats?.casesReceived },
     { value: liveStats?.activePilots || '50+', label: 'Pilots', icon: '🛸' },
     { value: liveStats?.recoveryRate || '85%', label: 'Recovery', icon: '✓' },
     { value: liveStats?.avgResponseTime || '48hr', label: 'Avg Time', icon: '⏱' },
@@ -62,8 +62,11 @@ export default function LandingPage() {
           {/* Stats */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', marginTop: '2rem' }}>
             {stats.map((s, i) => (
-              <div key={i} style={{ textAlign: 'center', padding: '0.75rem', background: 'rgba(4,107,210,0.06)', borderRadius: '8px', border: '1px solid rgba(4,107,210,0.12)' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.3rem', fontWeight: 700, color: 'var(--text-primary)' }}>{s.value}</div>
+              <div key={i} style={{ textAlign: 'center', padding: '0.75rem', background: i === 0 && s.live ? 'rgba(4,107,210,0.12)' : 'rgba(4,107,210,0.06)', borderRadius: '8px', border: i === 0 && s.live ? '1px solid rgba(4,107,210,0.25)' : '1px solid rgba(4,107,210,0.12)', position: 'relative' }}>
+                {i === 0 && s.live && (
+                  <span style={{ position: 'absolute', top: '0.4rem', right: '0.4rem', width: '6px', height: '6px', borderRadius: '50%', background: 'var(--success)', boxShadow: '0 0 8px var(--success-glow)', animation: 'pulse-green 2s ease-in-out infinite' }} />
+                )}
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.3rem', fontWeight: 700, color: i === 0 ? 'var(--primary)' : 'var(--text-primary)' }}>{s.value}</div>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</div>
               </div>
             ))}

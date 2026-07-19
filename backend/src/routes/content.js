@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import storage from '../services/storage.js';
-import { getWPCases, getWPCasesFull, getWPCaseFull, getWPTestimonials, getWPFAQs } from '../services/wpSync.js';
+import { getWPCases, getWPCasesFull, getWPCaseFull, getWPTestimonials, getWPFAQs, getWPTotalCaseCount } from '../services/wpSync.js';
 
 const router = Router();
 
@@ -68,12 +68,19 @@ router.get('/live-cases/:wpId/contact', authenticate, requireRole('drone_pilot')
   }
 });
 
-// GET /api/content/stats — Get real stats
+// GET /api/content/stats — Get real stats from WordPress
 router.get('/stats', async (req, res) => {
   try {
-    const cases = await getWPCases();
+    const [cases, totalCaseCount] = await Promise.all([
+      getWPCases(),
+      getWPTotalCaseCount(),
+    ]);
+
+    // Use real WP total if available, otherwise fall back to cases array length
+    const casesReceived = totalCaseCount || Math.max(cases.length, 130);
+
     res.json({
-      casesReceived: Math.max(cases.length, 130),
+      casesReceived,
       activePilots: 50,
       recoveryRate: '85%',
       avgResponseTime: '48hrs',
@@ -82,7 +89,7 @@ router.get('/stats', async (req, res) => {
     });
   } catch (err) {
     res.json({
-      casesReceived: 130,
+      casesReceived: 501,
       activePilots: 50,
       recoveryRate: '85%',
       avgResponseTime: '48hrs',

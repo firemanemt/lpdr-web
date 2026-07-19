@@ -240,6 +240,24 @@ export async function getWPFAQs() {
 }
 
 /**
+ * Get total case count from WordPress (real number from X-WP-Total header)
+ */
+export async function getWPTotalCaseCount() {
+  try {
+    const res = await fetch(`${WP_BASE}/submit-a-new-case?per_page=1`, {
+      headers: { 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+    const total = parseInt(res.headers.get('X-WP-Total'));
+    return isNaN(total) ? null : total;
+  } catch (err) {
+    console.warn('WP total count fetch failed:', err.message);
+    return null;
+  }
+}
+
+/**
  * Normalize pet type strings from WordPress submissions
  */
 function normalizePetType(type) {
