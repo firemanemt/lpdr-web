@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
+import config from '../config/index.js';
 
 /**
  * In-memory storage for demo/development mode
@@ -38,6 +39,32 @@ class InMemoryStorage {
       phone: '555-0100',
       role: 'pet_owner',
       avatar_url: null,
+      email_verified: true,
+      email_verification_token: null,
+      email_verification_expires: null,
+      password_reset_token: null,
+      password_reset_expires: null,
+      created_at: now,
+      updated_at: now,
+      password: bcrypt.hashSync('password123', 10),
+    });
+
+    // Demo Admin
+    const adminId = uuidv4();
+    this.users.push({
+      id: adminId,
+      wp_id: null,
+      email: 'admin@demo.com',
+      first_name: 'Admin',
+      last_name: 'LPDR',
+      phone: '555-0000',
+      role: 'admin',
+      avatar_url: null,
+      email_verified: true,
+      email_verification_token: null,
+      email_verification_expires: null,
+      password_reset_token: null,
+      password_reset_expires: null,
       created_at: now,
       updated_at: now,
       password: bcrypt.hashSync('password123', 10),
@@ -51,35 +78,40 @@ class InMemoryStorage {
         lat: 42.4527, lng: -75.0636, radius: 30, city: 'Oneonta, NY',
         bio: 'FAA Part 107 certified pilot with 5+ years of search and rescue experience. Thermal drone specialist.',
         drone: 'DJI Mavic 3 Thermal', thermal: true, spotlight: true, speaker: true,
-        price: 150, priceType: 'fixed'
+        price: 150, priceType: 'fixed',
+        faaCert: 'FAA-107-4235678', insurance: 'SkyWatch', policy: 'SW-2024-78901',
       },
       { 
         email: 'pilot2@demo.com', first: 'Jessica', last: 'Chen', 
         lat: 40.7128, lng: -74.0060, radius: 50, city: 'New York, NY',
         bio: 'Experienced drone pilot and animal lover. I know how stressful losing a pet can be — let me help bring them home.',
         drone: 'Autel EVO II Dual 640T', thermal: true, spotlight: true, speaker: false,
-        price: 200, priceType: 'fixed'
+        price: 200, priceType: 'fixed',
+        faaCert: 'FAA-107-4456123', insurance: 'DroneInsurance', policy: 'DI-2024-34567',
       },
       { 
         email: 'pilot3@demo.com', first: 'David', last: 'Martinez', 
         lat: 41.8781, lng: -87.6298, radius: 40, city: 'Chicago, IL',
         bio: 'Former firefighter turned drone pilot. Thermal imaging expert. Available weekends and evenings.',
         drone: 'DJI Matrice 30T', thermal: true, spotlight: true, speaker: true,
-        price: 250, priceType: 'fixed'
+        price: 250, priceType: 'fixed',
+        faaCert: 'FAA-107-3987654', insurance: 'Thompson Insurance', policy: 'TI-2024-11223',
       },
       { 
         email: 'pilot4@demo.com', first: 'Amanda', last: 'Lee', 
         lat: 34.0522, lng: -118.2437, radius: 35, city: 'Los Angeles, CA',
         bio: 'Animal rescue volunteer and certified drone pilot. I offer discounted rates for urgent cases.',
         drone: 'DJI Mavic 3 Classic + Thermal add-on', thermal: true, spotlight: false, speaker: false,
-        price: 100, priceType: 'fixed'
+        price: 100, priceType: 'fixed',
+        faaCert: null, insurance: null, policy: null,
       },
       { 
         email: 'pilot5@demo.com', first: 'Tom', last: 'Bradley', 
         lat: 29.7604, lng: -95.3698, radius: 45, city: 'Houston, TX',
         bio: 'Full-time drone search specialist. I have helped reunite over 50 families with their lost pets.',
         drone: 'Parrot Anafi Thermal', thermal: true, spotlight: true, speaker: true,
-        price: 175, priceType: 'fixed'
+        price: 175, priceType: 'fixed',
+        faaCert: 'FAA-107-4789012', insurance: 'AOPA', policy: 'AOPA-2024-55667',
       },
     ];
 
@@ -96,6 +128,11 @@ class InMemoryStorage {
         phone: `555-0${100 + i}`,
         role: 'drone_pilot',
         avatar_url: null,
+        email_verified: true,
+        email_verification_token: null,
+        email_verification_expires: null,
+        password_reset_token: null,
+        password_reset_expires: null,
         created_at: now,
         updated_at: now,
         password: bcrypt.hashSync('password123', 10),
@@ -108,7 +145,14 @@ class InMemoryStorage {
         base_lng: p.lng,
         service_radius: p.radius,
         available: true,
-        verified: true,
+        verified: !!p.faaCert, // Only verified if they have FAA cert
+        faa_cert_number: p.faaCert,
+        insurance_provider: p.insurance,
+        insurance_policy_number: p.policy,
+        verification_status: p.faaCert ? 'approved' : 'unsubmitted',
+        verification_submitted_at: p.faaCert ? now : null,
+        verification_reviewed_at: p.faaCert ? now : null,
+        verification_notes: null,
         membership_plan: 'monthly',
         membership_status: 'active',
         membership_expires: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
@@ -232,6 +276,7 @@ class InMemoryStorage {
   }
 
   async createUser(userData) {
+    const verificationToken = uuidv4();
     const user = {
       id: uuidv4(),
       wp_id: null,
@@ -241,11 +286,17 @@ class InMemoryStorage {
       phone: userData.phone || null,
       role: userData.role,
       avatar_url: null,
+      email_verified: false,
+      email_verification_token: verificationToken,
+      email_verification_expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      password_reset_token: null,
+      password_reset_expires: null,
       created_at: new Date(),
       updated_at: new Date(),
       password: bcrypt.hashSync(userData.password, 10),
     };
     this.users.push(user);
+    user._verificationToken = verificationToken; // For email sending
     return user;
   }
 
@@ -254,6 +305,50 @@ class InMemoryStorage {
     if (idx === -1) return null;
     this.users[idx] = { ...this.users[idx], ...updates, updated_at: new Date() };
     return this.users[idx];
+  }
+
+  async verifyEmail(token) {
+    const user = this.users.find(u => 
+      u.email_verification_token === token && 
+      u.email_verification_expires > new Date()
+    );
+    if (!user) return null;
+    user.email_verified = true;
+    user.email_verification_token = null;
+    user.email_verification_expires = null;
+    user.updated_at = new Date();
+    return user;
+  }
+
+  async findByVerificationToken(token) {
+    return this.users.find(u => 
+      u.email_verification_token === token && 
+      u.email_verification_expires > new Date()
+    ) || null;
+  }
+
+  async setPasswordResetToken(email) {
+    const user = this.users.find(u => u.email === email);
+    if (!user) return null;
+    const token = uuidv4();
+    user.password_reset_token = token;
+    user.password_reset_expires = new Date(Date.now() + 60 * 60 * 1000);
+    user.updated_at = new Date();
+    user._resetToken = token;
+    return user;
+  }
+
+  async resetPassword(token, newPassword) {
+    const user = this.users.find(u => 
+      u.password_reset_token === token && 
+      u.password_reset_expires > new Date()
+    );
+    if (!user) return null;
+    user.password = bcrypt.hashSync(newPassword, 10);
+    user.password_reset_token = null;
+    user.password_reset_expires = null;
+    user.updated_at = new Date();
+    return user;
   }
 
   // === PILOT METHODS ===
@@ -270,7 +365,6 @@ class InMemoryStorage {
   async getAvailablePilots(lat, lng, radius) {
     return this.pilotProfiles
       .filter(p => {
-        const pilot = this.users.find(u => u.id === p.id);
         if (!p.available || !p.verified) return false;
         if (lat && lng && radius) {
           const dist = this.haversineDistance(lat, lng, parseFloat(p.base_lat), parseFloat(p.base_lng));
@@ -296,6 +390,13 @@ class InMemoryStorage {
       service_radius: data.serviceRadius || 25,
       available: false,
       verified: false,
+      faa_cert_number: data.faaCertNumber || null,
+      insurance_provider: data.insuranceProvider || null,
+      insurance_policy_number: data.insurancePolicyNumber || null,
+      verification_status: data.faaCertNumber ? 'pending' : 'unsubmitted',
+      verification_submitted_at: data.faaCertNumber ? new Date() : null,
+      verification_reviewed_at: null,
+      verification_notes: null,
       membership_plan: null,
       membership_status: 'inactive',
       membership_expires: null,
@@ -323,7 +424,7 @@ class InMemoryStorage {
         this.pilotPricing.push({
           id: uuidv4(),
           pilot_id: id,
-          price_type: pr.priceType,
+          price_type: pr.priceType || pr.price_type,
           amount: pr.amount || null,
           description: pr.description || null,
         });
@@ -338,6 +439,46 @@ class InMemoryStorage {
     if (idx === -1) return null;
     this.pilotProfiles[idx] = { ...this.pilotProfiles[idx], ...updates, updated_at: new Date() };
     return this.pilotProfiles[idx];
+  }
+
+  async submitPilotVerification(id, data) {
+    return await this.updatePilotProfile(id, {
+      faa_cert_number: data.faaCertNumber,
+      insurance_provider: data.insuranceProvider,
+      insurance_policy_number: data.insurancePolicyNumber,
+      verification_status: 'pending',
+      verification_submitted_at: new Date(),
+    });
+  }
+
+  async getPendingVerifications() {
+    return this.pilotProfiles
+      .filter(p => p.verification_status === 'pending')
+      .map(p => {
+        const user = this.users.find(u => u.id === p.id);
+        return {
+          id: p.id,
+          email: user?.email,
+          first_name: user?.first_name,
+          last_name: user?.last_name,
+          phone: user?.phone,
+          created_at: user?.created_at,
+          faa_cert_number: p.faa_cert_number,
+          insurance_provider: p.insurance_provider,
+          insurance_policy_number: p.insurance_policy_number,
+          verification_status: p.verification_status,
+          verification_submitted_at: p.verification_submitted_at,
+        };
+      });
+  }
+
+  async reviewPilotVerification(id, status, notes) {
+    return await this.updatePilotProfile(id, {
+      verification_status: status,
+      verification_notes: notes || null,
+      verification_reviewed_at: new Date(),
+      verified: status === 'approved',
+    });
   }
 
   // === CASE METHODS ===
@@ -519,6 +660,39 @@ class InMemoryStorage {
     }
   }
 
+  // === ADMIN METHODS ===
+  async getAllUsers(role, limit = 50, offset = 0) {
+    let filtered = this.users;
+    if (role) filtered = filtered.filter(u => u.role === role);
+    return filtered.slice(offset, offset + limit).map(u => {
+      const { password, ...safe } = u;
+      return safe;
+    });
+  }
+
+  async getUserCount() {
+    const counts = {};
+    this.users.forEach(u => { counts[u.role] = (counts[u.role] || 0) + 1; });
+    return counts;
+  }
+
+  async getCaseCount() {
+    const counts = {};
+    this.cases.forEach(c => { counts[c.status] = (counts[c.status] || 0) + 1; });
+    return counts;
+  }
+
+  async getAllCases(limit = 50, offset = 0) {
+    return this.cases.slice(offset, offset + limit).map(c => {
+      const owner = this.users.find(u => u.id === c.owner_id);
+      return {
+        ...c,
+        owner_first: owner?.first_name,
+        owner_last: owner?.last_name,
+      };
+    });
+  }
+
   // === UTILITY ===
   haversineDistance(lat1, lon1, lat2, lon2) {
     const R = 3959; // miles
@@ -532,6 +706,39 @@ class InMemoryStorage {
   }
 }
 
-// Singleton
-const storage = new InMemoryStorage();
-export default storage;
+
+// ============================
+// STORAGE FACTORY
+// Auto-detects PostgreSQL vs in-memory
+// ============================
+
+let storageInstance = null;
+
+export async function getStorage() {
+  if (storageInstance) return storageInstance;
+
+  const dbUrl = config.database.url;
+  
+  if (dbUrl) {
+    try {
+      // Test the connection
+      const { default: DatabaseStorage } = await import('./dbStorage.js');
+      storageInstance = new DatabaseStorage();
+      // Quick connection test
+      await storageInstance.pool.query('SELECT 1');
+      console.log('✅ PostgreSQL storage active');
+      return storageInstance;
+    } catch (err) {
+      console.warn('⚠️ PostgreSQL connection failed, falling back to in-memory:', err.message);
+    }
+  }
+
+  // Fall back to in-memory
+  storageInstance = new InMemoryStorage();
+  return storageInstance;
+}
+
+// Default export for backwards compatibility (synchronous access)
+// This creates in-memory immediately; call getStorage() for async DB init
+const syncStorage = new InMemoryStorage();
+export default syncStorage;

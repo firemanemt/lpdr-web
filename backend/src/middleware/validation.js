@@ -8,6 +8,11 @@ export const registerSchema = z.object({
   lastName: z.string().min(1, 'Last name is required'),
   phone: z.string().min(10, 'Phone number must be at least 10 digits').optional(),
   role: z.enum(['pet_owner', 'drone_pilot']),
+  agreeToTerms: z.literal(true, { errorMap: () => ({ message: 'You must agree to the Terms of Service' }) }),
+  // Pilot verification fields (optional at registration)
+  faaCertNumber: z.string().optional(),
+  insuranceProvider: z.string().optional(),
+  insurancePolicyNumber: z.string().optional(),
 });
 
 // Login validation
@@ -55,6 +60,19 @@ export const pilotProfileSchema = z.object({
     amount: z.number().positive().optional(),
     description: z.string().optional(),
   })).optional(),
+});
+
+// Pilot verification submission
+export const pilotVerificationSchema = z.object({
+  faaCertNumber: z.string().min(1, 'FAA certificate number is required'),
+  insuranceProvider: z.string().optional(),
+  insurancePolicyNumber: z.string().optional(),
+});
+
+// Admin verification review
+export const adminReviewSchema = z.object({
+  status: z.enum(['approved', 'rejected']),
+  notes: z.string().optional(),
 });
 
 // Validate middleware

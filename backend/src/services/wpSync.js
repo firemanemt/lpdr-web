@@ -1,9 +1,12 @@
 /**
  * WordPress Sync Service
  * Pulls real data from lostpetdronerecovery.com WordPress REST API
- * - Cases (lost pet submissions)
+ * - Cases (lost pet submissions) — STRIPS sensitive owner contact info
  * - Testimonials
  * - FAQs
+ * 
+ * SECURITY: Owner phone numbers and emails are NEVER returned in public responses.
+ * They are only available through authenticated endpoints for verified pilots.
  */
 
 const WP_BASE = 'https://lostpetdronerecovery.com/wp-json/wp/v2';
@@ -11,6 +14,7 @@ const WP_BASE = 'https://lostpetdronerecovery.com/wp-json/wp/v2';
 // Cache to avoid hammering the API
 let cache = {
   cases: { data: null, timestamp: 0 },
+  casesFull: { data: null, timestamp: 0 }, // Full data with contact info (for auth'd pilots only)
   testimonials: { data: null, timestamp: 0 },
   faqs: { data: null, timestamp: 0 },
 };
@@ -32,15 +36,53 @@ async function wpFetch(endpoint) {
 
 /**
  * Fetch real lost pet cases from the WordPress site
+ * PUBLIC VERSION — strips phone/email for privacy
  */
 export async function getWPCases() {
   if (cache.cases.data && Date.now() - cache.cases.timestamp < CACHE_TTL) {
     return cache.cases.data;
   }
 
+  // Fetch full data and cache it
+  const fullCases = await getWPCasesFull();
+  
+  // Strip sensitive contact info for public consumption
+  const publicCases = fullCases.map(c => ({
+    id: c.id,
+    wp_id: c.wp_id,
+    pet_name: c.pet_name,
+    pet_type: c.pet_type,
+    pet_breed: c.pet_breed,
+    last_seen_address: c.last_seen_address,
+    last_seen_date: c.last_seen_date,
+    owner_name: c.owner_name ? c.owner_name.split(' ')[0] + '.' : '', // First name + initial only
+    photo_url: c.photo_url,
+    photo_thumb: c.photo_thumb,
+    status: c.status,
+    source: c.source,
+    date: c.date,
+    city: c.city,
+    state: c.state,
+    // DO NOT include: phone, email, full address, zip_code, street_address
+    has_contact_info: !!(c.phone || c.email), // Let UI know contact exists but don't expose it
+  }));
+
+  cache.cases = { data: publicCases, timestamp: Date.now() };
+  return publicCases;
+}
+
+/**
+ * Fetch real lost pet cases with FULL contact info
+ * ONLY for authenticated, verified pilots
+ */
+export async function getWPCasesFull() {
+  if (cache.casesFull.data && Date.now() - cache.casesFull.timestamp < CACHE_TTL) {
+    return cache.casesFull.data;
+  }
+
   const raw = await wpFetch('/submit-a-new-case?per_page=50&status=publish');
   if (!raw || !Array.isArray(raw)) {
-    return cache.cases.data || [];
+    return cache.casesFull.data || [];
   }
 
   const cases = raw.map(post => {
@@ -55,18 +97,35 @@ export async function getWPCases() {
       pet_breed: acf.pet_type || '',
       pet_color: '',
       last_seen_address: acf.last_seen || '',
+      street_address: acf.street_address || '',
+      city: acf.city || '',
+      state: acf.state || '',
+      zip_code: acf.zip_code || '',
       last_seen_date: post.date,
       owner_name: acf.pet_owner || '',
+      email: acf.email_address || '',   // SENSITIVE
+      phone: acf.phone || '',           // SENSITIVE
+      description: acf.description || '',
       photo_url: photo?.sizes?.medium || photo?.url || null,
       photo_thumb: photo?.sizes?.thumbnail || null,
-      status: 'submitted',
+      photo_full: photo?.url || null,
+      status: acf.status || 'submitted',
       source: 'website',
       date: post.date,
+      wp_link: post.link,
     };
   });
 
-  cache.cases = { data: cases, timestamp: Date.now() };
+  cache.casesFull = { data: cases, timestamp: Date.now() };
   return cases;
+}
+
+/**
+ * Get a single WP case with full contact info (for verified pilots only)
+ */
+export async function getWPCaseFull(wpId) {
+  const fullCases = await getWPCasesFull();
+  return fullCases.find(c => c.wp_id === parseInt(wpId)) || null;
 }
 
 /**
@@ -77,8 +136,6 @@ export async function getWPTestimonials() {
     return cache.testimonials.data;
   }
 
-  // The testimonials are embedded in pages - pull from the "Find a Drone Pilot" page
-  // We also have hardcoded testimonials from the homepage that match real reviews
   const testimonials = [
     {
       id: 'wp-1',
@@ -164,7 +221,7 @@ export async function getWPFAQs() {
     {
       id: 'faq-7',
       question: 'Can I talk to someone before booking?',
-      answer: 'Yes. You can message any pilot directly from their profile. If you\'re overwhelmed or unsure who to contact, hit "Request Assistance" and we\'ll try to connect you with someone who can help.',
+      answer: 'Yes. You can message any pilot directly from their profile. If you\'re overwhelmed or unsure who to contact, hit \"Request Assistance\" and we\'ll try to connect you with someone who can help.',
     },
     {
       id: 'faq-8',

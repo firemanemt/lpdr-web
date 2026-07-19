@@ -16,18 +16,27 @@ pool.on('error', (err) => {
 export async function initDatabase() {
   const client = await pool.connect();
   try {
+    // Enable UUID extension first
+    await client.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
+
     await client.query(`
 
       -- Users (mirrored from WordPress with extras)
       CREATE TABLE IF NOT EXISTS users (
-        id UUID PRIMARY KEY,
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         wp_id INTEGER UNIQUE,
         email VARCHAR(255) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
         first_name VARCHAR(100),
         last_name VARCHAR(100),
         phone VARCHAR(20),
         role VARCHAR(20) NOT NULL CHECK (role IN ('pet_owner', 'drone_pilot', 'admin')),
         avatar_url TEXT,
+        email_verified BOOLEAN DEFAULT FALSE,
+        email_verification_token VARCHAR(255),
+        email_verification_expires TIMESTAMP,
+        password_reset_token VARCHAR(255),
+        password_reset_expires TIMESTAMP,
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
       );
@@ -41,6 +50,13 @@ export async function initDatabase() {
         service_radius INTEGER DEFAULT 25,
         available BOOLEAN DEFAULT FALSE,
         verified BOOLEAN DEFAULT FALSE,
+        faa_cert_number VARCHAR(100),
+        insurance_provider VARCHAR(200),
+        insurance_policy_number VARCHAR(100),
+        verification_status VARCHAR(20) DEFAULT 'unsubmitted' CHECK (verification_status IN ('unsubmitted', 'pending', 'approved', 'rejected')),
+        verification_submitted_at TIMESTAMP,
+        verification_reviewed_at TIMESTAMP,
+        verification_notes TEXT,
         membership_plan VARCHAR(20) CHECK (membership_plan IN ('monthly', 'yearly')),
         membership_status VARCHAR(20) DEFAULT 'inactive' CHECK (membership_status IN ('active', 'expired', 'cancelled', 'inactive')),
         membership_expires TIMESTAMP,
@@ -54,7 +70,7 @@ export async function initDatabase() {
 
       -- Pilot Equipment
       CREATE TABLE IF NOT EXISTS pilot_equipment (
-        id UUID PRIMARY KEY,
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         pilot_id UUID REFERENCES pilot_profiles(id) ON DELETE CASCADE,
         drone_model VARCHAR(200),
         has_thermal BOOLEAN DEFAULT FALSE,
@@ -66,7 +82,7 @@ export async function initDatabase() {
 
       -- Pilot Pricing
       CREATE TABLE IF NOT EXISTS pilot_pricing (
-        id UUID PRIMARY KEY,
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         pilot_id UUID REFERENCES pilot_profiles(id) ON DELETE CASCADE,
         price_type VARCHAR(20) CHECK (price_type IN ('fixed', 'hourly', 'free_form', 'negotiable')),
         amount DECIMAL(10,2),
@@ -75,7 +91,7 @@ export async function initDatabase() {
 
       -- Lost Pet Cases
       CREATE TABLE IF NOT EXISTS cases (
-        id UUID PRIMARY KEY,
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         owner_id UUID REFERENCES users(id) NOT NULL,
         pilot_id UUID REFERENCES users(id),
         pet_name VARCHAR(100) NOT NULL,
@@ -103,7 +119,7 @@ export async function initDatabase() {
 
       -- Case Photos
       CREATE TABLE IF NOT EXISTS case_photos (
-        id UUID PRIMARY KEY,
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         case_id UUID REFERENCES cases(id) ON DELETE CASCADE,
         url TEXT NOT NULL,
         uploaded_by UUID REFERENCES users(id),
@@ -112,7 +128,7 @@ export async function initDatabase() {
 
       -- Case Timeline
       CREATE TABLE IF NOT EXISTS case_timeline (
-        id UUID PRIMARY KEY,
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         case_id UUID REFERENCES cases(id) ON DELETE CASCADE,
         event_type VARCHAR(50) NOT NULL,
         description TEXT,
@@ -122,7 +138,7 @@ export async function initDatabase() {
 
       -- Messages (Chat)
       CREATE TABLE IF NOT EXISTS messages (
-        id UUID PRIMARY KEY,
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         case_id UUID REFERENCES cases(id) ON DELETE CASCADE,
         sender_id UUID REFERENCES users(id),
         text TEXT,
@@ -133,7 +149,7 @@ export async function initDatabase() {
 
       -- Reviews
       CREATE TABLE IF NOT EXISTS reviews (
-        id UUID PRIMARY KEY,
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         case_id UUID REFERENCES cases(id) ON DELETE CASCADE UNIQUE,
         owner_id UUID REFERENCES users(id),
         pilot_id UUID REFERENCES users(id),
@@ -144,7 +160,7 @@ export async function initDatabase() {
 
       -- Transactions
       CREATE TABLE IF NOT EXISTS transactions (
-        id UUID PRIMARY KEY,
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         stripe_id VARCHAR(100) UNIQUE,
         from_user_id UUID REFERENCES users(id),
         to_user_id UUID REFERENCES users(id),
@@ -158,8 +174,8 @@ export async function initDatabase() {
 
       -- Pilot Location History
       CREATE TABLE IF NOT EXISTS pilot_locations (
-        id UUID PRIMARY KEY,
-        pilot_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        pilot_id UUID REFERENCES users(id) ON DELETE CASCADE UNIQUE,
         lat DECIMAL(10,7),
         lng DECIMAL(10,7),
         heading DECIMAL(5,2),
@@ -169,7 +185,7 @@ export async function initDatabase() {
 
       -- Notification tokens
       CREATE TABLE IF NOT EXISTS notification_tokens (
-        id UUID PRIMARY KEY,
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         user_id UUID REFERENCES users(id) ON DELETE CASCADE,
         token TEXT NOT NULL,
         platform VARCHAR(10) CHECK (platform IN ('web', 'ios', 'android')),
@@ -185,10 +201,35 @@ export async function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_case_timeline_case ON case_timeline(case_id);
       CREATE INDEX IF NOT EXISTS idx_users_wp ON users(wp_id);
       CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
-
-      -- Enable UUID extension
-      CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+      CREATE INDEX IF NOT EXISTS idx_users_email_token ON users(email_verification_token);
+      CREATE INDEX IF NOT EXISTS idx_users_reset_token ON users(password_reset_token);
+      CREATE INDEX IF NOT EXISTS idx_pilot_verification ON pilot_profiles(verification_status);
     `);
+
+    // Add new columns if they don't exist (for existing databases)
+    const alterQueries = [
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verification_token VARCHAR(255)`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verification_expires TIMESTAMP`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token VARCHAR(255)`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_expires TIMESTAMP`,
+      `ALTER TABLE pilot_profiles ADD COLUMN IF NOT EXISTS faa_cert_number VARCHAR(100)`,
+      `ALTER TABLE pilot_profiles ADD COLUMN IF NOT EXISTS insurance_provider VARCHAR(200)`,
+      `ALTER TABLE pilot_profiles ADD COLUMN IF NOT EXISTS insurance_policy_number VARCHAR(100)`,
+      `ALTER TABLE pilot_profiles ADD COLUMN IF NOT EXISTS verification_status VARCHAR(20) DEFAULT 'unsubmitted'`,
+      `ALTER TABLE pilot_profiles ADD COLUMN IF NOT EXISTS verification_submitted_at TIMESTAMP`,
+      `ALTER TABLE pilot_profiles ADD COLUMN IF NOT EXISTS verification_reviewed_at TIMESTAMP`,
+      `ALTER TABLE pilot_profiles ADD COLUMN IF NOT EXISTS verification_notes TEXT`,
+    ];
+
+    for (const q of alterQueries) {
+      try {
+        await client.query(q);
+      } catch (err) {
+        // Column already exists, ignore
+        if (!err.message.includes('already exists')) throw err;
+      }
+    }
 
     console.log('✅ Database schema initialized');
   } catch (err) {

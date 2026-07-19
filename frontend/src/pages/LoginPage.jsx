@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
-import { FiLock, FiUser } from 'react-icons/fi';
+import { FiLock, FiUser, FiAlertCircle } from 'react-icons/fi';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('owner@demo.com');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const { login } = useAuth();
@@ -101,6 +101,12 @@ export default function LoginPage() {
                 {errors.password && <div className="form-error">{errors.password}</div>}
               </div>
 
+              <div style={{ textAlign: 'right', marginBottom: '0.75rem' }}>
+                <Link to="/forgot-password" style={{ fontSize: '0.8rem', color: 'var(--primary)', textDecoration: 'none' }}>
+                  Forgot password?
+                </Link>
+              </div>
+
               <button type="submit" className="btn btn-primary btn-lg" style={{ width: '100%' }} disabled={loading}>
                 {loading ? 'Authenticating...' : 'Sign In'}
               </button>
@@ -120,6 +126,9 @@ export default function LoginPage() {
             <button onClick={() => quickLogin('pilot')} className="btn btn-secondary btn-sm" style={{ flex: 1 }} disabled={loading}>
               🛸 Drone Pilot
             </button>
+          </div>
+          <div style={{ textAlign: 'center', marginTop: '0.5rem', fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+            Demo mode — data resets on restart
           </div>
         </div>
 

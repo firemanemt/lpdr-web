@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate, requireRole, optionalAuth } from '../middleware/auth.js';
-import { validate, pilotProfileSchema } from '../middleware/validation.js';
+import { validate, pilotProfileSchema, pilotVerificationSchema } from '../middleware/validation.js';
 import { AppError } from '../middleware/errorHandler.js';
 import storage from '../services/storage.js';
 
@@ -32,9 +32,9 @@ router.get('/', optionalAuth, async (req, res, next) => {
       });
     }
 
-    // Map to safe output (remove password)
+    // Map to safe output (remove password, sensitive verification data)
     const safePilots = pilots.map(p => {
-      const { password, ...safeUser } = p;
+      const { password, email_verification_token, password_reset_token, ...safeUser } = p;
       return {
         id: p.id,
         email: p.email,
@@ -42,7 +42,15 @@ router.get('/', optionalAuth, async (req, res, next) => {
         lastName: p.last_name,
         phone: p.phone,
         avatarUrl: p.avatar_url,
-        profile: p.profile,
+        emailVerified: p.email_verified,
+        profile: {
+          ...p.profile,
+          // Remove sensitive verification details from public list
+          faa_cert_number: p.profile?.verified ? p.profile.faa_cert_number : null,
+          insurance_provider: null,
+          insurance_policy_number: null,
+          verification_notes: null,
+        },
         equipment: p.equipment,
         pricing: p.pricing,
         location: p.location,
@@ -62,7 +70,12 @@ router.get('/:id', optionalAuth, async (req, res, next) => {
     if (!pilot) {
       throw new AppError('Pilot not found', 404);
     }
-    const { password, ...safePilot } = pilot;
+    const { password, email_verification_token, password_reset_token, ...safePilot } = pilot;
+    // Don't expose sensitive verification details publicly
+    if (safePilot.profile) {
+      safePilot.profile.insurance_policy_number = null;
+      safePilot.profile.verification_notes = null;
+    }
     res.json({ pilot: safePilot });
   } catch (err) {
     next(err);
@@ -95,34 +108,102 @@ router.put('/me/profile', authenticate, requireRole('drone_pilot'), async (req, 
 
     // Update equipment if provided
     if (updates.equipment) {
-      // For demo purposes, clear and re-add
+      // For demo/in-memory: clear and re-add
       storage.pilotEquipment = storage.pilotEquipment.filter(e => e.pilot_id !== pilotId);
-      updates.equipment.forEach(eq => {
-        storage.pilotEquipment.push({
-          id: crypto.randomUUID?.() || require('uuid').v4(),
-          pilot_id: pilotId,
-          ...eq,
-        });
-      });
+      for (const eq of updates.equipment) {
+        if (storage.pilotEquipment) {
+          storage.pilotEquipment.push({
+            id: crypto.randomUUID?.() || (await import('uuid')).v4(),
+            pilot_id: pilotId,
+            drone_model: eq.droneModel || eq.drone_model,
+            has_thermal: eq.hasThermal || eq.has_thermal || false,
+            has_spotlight: eq.hasSpotlight || eq.has_spotlight || false,
+            has_speaker: eq.hasSpeaker || eq.has_speaker || false,
+            camera_type: eq.cameraType || eq.camera_type,
+            notes: eq.notes,
+          });
+        }
+      }
     }
 
     // Update pricing if provided
     if (updates.pricing) {
       storage.pilotPricing = storage.pilotPricing.filter(p => p.pilot_id !== pilotId);
-      updates.pricing.forEach(pr => {
-        storage.pilotPricing.push({
-          id: crypto.randomUUID?.() || require('uuid').v4(),
-          pilot_id: pilotId,
-          price_type: pr.priceType,
-          amount: pr.amount,
-          description: pr.description,
-        });
-      });
+      for (const pr of updates.pricing) {
+        if (storage.pilotPricing) {
+          storage.pilotPricing.push({
+            id: crypto.randomUUID?.() || (await import('uuid')).v4(),
+            pilot_id: pilotId,
+            price_type: pr.priceType || pr.price_type,
+            amount: pr.amount,
+            description: pr.description,
+          });
+        }
+      }
     }
 
     const updated = await storage.getPilotProfile(pilotId);
     const { password, ...safePilot } = updated;
     res.json({ pilot: safePilot });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/pilots/me/verification — Submit pilot verification (FAA Part 107, insurance)
+router.post('/me/verification', authenticate, requireRole('drone_pilot'), validate(pilotVerificationSchema), async (req, res, next) => {
+  try {
+    const pilotId = req.userId;
+    const { faaCertNumber, insuranceProvider, insurancePolicyNumber } = req.validatedBody;
+
+    // Check if already verified or pending
+    const pilot = await storage.getPilotProfile(pilotId);
+    if (!pilot) {
+      throw new AppError('Pilot profile not found', 404);
+    }
+    if (pilot.profile?.verification_status === 'approved') {
+      throw new AppError('You are already verified', 400);
+    }
+    if (pilot.profile?.verification_status === 'pending') {
+      throw new AppError('Verification already submitted and pending review', 400);
+    }
+
+    const result = await storage.submitPilotVerification(pilotId, {
+      faaCertNumber,
+      insuranceProvider,
+      insurancePolicyNumber,
+    });
+
+    res.json({
+      message: 'Verification submitted! Our team will review your credentials within 1-2 business days.',
+      verification: {
+        status: 'pending',
+        submittedAt: result.verification_submitted_at,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/pilots/me/verification — Get verification status
+router.get('/me/verification', authenticate, requireRole('drone_pilot'), async (req, res, next) => {
+  try {
+    const pilot = await storage.getPilotProfile(req.userId);
+    if (!pilot?.profile) {
+      throw new AppError('Pilot profile not found', 404);
+    }
+    res.json({
+      verification: {
+        status: pilot.profile.verification_status,
+        faaCertNumber: pilot.profile.faa_cert_number,
+        insuranceProvider: pilot.profile.insurance_provider,
+        submittedAt: pilot.profile.verification_submitted_at,
+        reviewedAt: pilot.profile.verification_reviewed_at,
+        notes: pilot.profile.verification_notes,
+        verified: pilot.profile.verified,
+      },
+    });
   } catch (err) {
     next(err);
   }

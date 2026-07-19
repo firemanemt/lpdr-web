@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
-import { FiUser, FiMail, FiLock, FiPhone } from 'react-icons/fi';
+import { FiUser, FiMail, FiLock, FiPhone, FiCheck, FiShield } from 'react-icons/fi';
 
 export default function RegisterPage() {
   const [searchParams] = useSearchParams();
@@ -16,6 +16,11 @@ export default function RegisterPage() {
     password: '',
     confirmPassword: '',
     role: defaultRole,
+    agreeToTerms: false,
+    // Pilot-specific fields
+    faaCertNumber: '',
+    insuranceProvider: '',
+    insurancePolicyNumber: '',
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -31,6 +36,7 @@ export default function RegisterPage() {
     if (!form.email.trim()) errs.email = 'Email is required';
     if (!form.password || form.password.length < 6) errs.password = 'Password must be at least 6 characters';
     if (form.password !== form.confirmPassword) errs.confirmPassword = 'Passwords do not match';
+    if (!form.agreeToTerms) errs.agreeToTerms = 'You must agree to the Terms of Service';
     return errs;
   };
 
@@ -49,9 +55,13 @@ export default function RegisterPage() {
         phone: form.phone,
         password: form.password,
         role: form.role,
+        agreeToTerms: form.agreeToTerms,
+        faaCertNumber: form.role === 'drone_pilot' ? form.faaCertNumber : undefined,
+        insuranceProvider: form.role === 'drone_pilot' ? form.insuranceProvider : undefined,
+        insurancePolicyNumber: form.role === 'drone_pilot' ? form.insurancePolicyNumber : undefined,
       });
       
-      toast.success(`Welcome, ${user.firstName}!`);
+      toast.success(`Welcome, ${user.firstName}! Please check your email to verify your account.`);
       
       if (user.role === 'pet_owner') navigate('/owner/dashboard');
       else if (user.role === 'drone_pilot') navigate('/pilot/dashboard');
@@ -77,18 +87,12 @@ export default function RegisterPage() {
         <div style={{ display: 'flex', marginBottom: '1rem', border: '1px solid var(--border-default)', borderRadius: '8px', overflow: 'hidden' }}>
           <button
             style={{
-              flex: 1,
-              padding: '0.65rem',
+              flex: 1, padding: '0.65rem',
               background: form.role === 'pet_owner' ? 'var(--primary-bg)' : 'var(--bg-card)',
               color: form.role === 'pet_owner' ? 'var(--primary)' : 'var(--text-muted)',
-              border: 'none',
-              borderRight: '1px solid var(--border-default)',
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontSize: '0.85rem',
-              fontFamily: 'var(--font-body)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.04em',
+              border: 'none', borderRight: '1px solid var(--border-default)',
+              fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem', fontFamily: 'var(--font-body)',
+              textTransform: 'uppercase', letterSpacing: '0.04em',
             }}
             onClick={() => updateField('role', 'pet_owner')}
           >
@@ -96,17 +100,11 @@ export default function RegisterPage() {
           </button>
           <button
             style={{
-              flex: 1,
-              padding: '0.65rem',
+              flex: 1, padding: '0.65rem',
               background: form.role === 'drone_pilot' ? 'var(--primary-bg)' : 'var(--bg-card)',
               color: form.role === 'drone_pilot' ? 'var(--primary)' : 'var(--text-muted)',
-              border: 'none',
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontSize: '0.85rem',
-              fontFamily: 'var(--font-body)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.04em',
+              border: 'none', fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem',
+              fontFamily: 'var(--font-body)', textTransform: 'uppercase', letterSpacing: '0.04em',
             }}
             onClick={() => updateField('role', 'drone_pilot')}
           >
@@ -155,19 +153,54 @@ export default function RegisterPage() {
                 </div>
               </div>
 
+              {/* Pilot-specific fields */}
               {form.role === 'drone_pilot' && (
                 <div style={{
                   background: 'var(--primary-bg)',
                   border: '1px solid rgba(4,107,210,0.2)',
                   padding: '0.75rem',
                   borderRadius: '8px',
-                  marginBottom: '1rem',
-                  fontSize: '0.8rem',
-                  color: 'var(--text-secondary)',
+                  marginBottom: '0.75rem',
                 }}>
-                  <strong>📋 Pilot account:</strong> After registering, you'll set up your pilot profile including equipment, service area, and pricing.
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem', fontSize: '0.8rem', fontWeight: 600, color: 'var(--primary)' }}>
+                    <FiShield size={14} /> Pilot Verification
+                  </div>
+                  <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+                    <label className="form-label">FAA Part 107 Certificate #</label>
+                    <input type="text" className="form-input" value={form.faaCertNumber} onChange={(e) => updateField('faaCertNumber', e.target.value)} placeholder="e.g., FAA-107-4235678" style={{ fontSize: '0.85rem' }} />
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>Required to get verified and appear on the map</div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Insurance Provider</label>
+                      <input type="text" className="form-input" value={form.insuranceProvider} onChange={(e) => updateField('insuranceProvider', e.target.value)} placeholder="SkyWatch, AOPA..." style={{ fontSize: '0.85rem' }} />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Policy Number</label>
+                      <input type="text" className="form-input" value={form.insurancePolicyNumber} onChange={(e) => updateField('insurancePolicyNumber', e.target.value)} placeholder="SW-2024-..." style={{ fontSize: '0.85rem' }} />
+                    </div>
+                  </div>
                 </div>
               )}
+
+              {/* Terms of Service */}
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  <input
+                    type="checkbox"
+                    checked={form.agreeToTerms}
+                    onChange={(e) => updateField('agreeToTerms', e.target.checked)}
+                    style={{ marginTop: '0.15rem', accentColor: 'var(--primary)' }}
+                  />
+                  <span>
+                    I agree to the{' '}
+                    <Link to="/terms" target="_blank" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>Terms of Service</Link>
+                    {' '}and{' '}
+                    <Link to="/privacy" target="_blank" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>Privacy Policy</Link>
+                  </span>
+                </label>
+                {errors.agreeToTerms && <div className="form-error">{errors.agreeToTerms}</div>}
+              </div>
 
               <button type="submit" className="btn btn-primary btn-lg" style={{ width: '100%' }} disabled={loading}>
                 {loading ? 'Creating Account...' : `Create ${form.role === 'drone_pilot' ? 'Pilot' : 'Pet Owner'} Account`}

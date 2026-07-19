@@ -1,17 +1,30 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { FiArrowLeft, FiMapPin, FiClock, FiPhone, FiMail, FiAlertCircle, FiShare2, FiExternalLink } from 'react-icons/fi';
+import { useAuth } from '../contexts/AuthContext';
+import { contentApi } from '../services/api';
+import { FiArrowLeft, FiMapPin, FiClock, FiPhone, FiMail, FiAlertCircle, FiShare2, FiExternalLink, FiLock, FiShield } from 'react-icons/fi';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 export default function LiveCaseDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isAuthenticated, isDronePilot, user } = useAuth();
   const [caseData, setCaseData] = useState(null);
+  const [contactInfo, setContactInfo] = useState(null);
+  const [loadingContact, setLoadingContact] = useState(false);
+  const [contactError, setContactError] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadCase();
   }, [id]);
+
+  // Load contact info if user is a verified pilot
+  useEffect(() => {
+    if (caseData?.wp_id && isDronePilot) {
+      loadContactInfo();
+    }
+  }, [caseData, isDronePilot]);
 
   const loadCase = async () => {
     setLoading(true);
@@ -30,8 +43,7 @@ export default function LiveCaseDetailPage() {
         pet_breed: acf.pet_type || '',
         last_seen: acf.last_seen || '',
         owner_name: acf.pet_owner || '',
-        email: acf.email_address || '',
-        phone: acf.phone || '',
+        // DO NOT load phone/email from WP API directly - use our secure endpoint
         street_address: acf.street_address || '',
         city: acf.city || '',
         state: acf.state || '',
@@ -42,11 +54,27 @@ export default function LiveCaseDetailPage() {
         date: data.date,
         status: acf.status || 'submitted',
         wp_link: data.link,
+        // Flags for UI
+        has_contact_info: !!(acf.phone || acf.email_address),
       });
     } catch (err) {
       console.error('Failed to load case:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadContactInfo = async () => {
+    if (!caseData?.wp_id || !isDronePilot) return;
+    setLoadingContact(true);
+    setContactError('');
+    try {
+      const res = await contentApi.getCaseContact(caseData.wp_id);
+      setContactInfo(res.data.contact);
+    } catch (err) {
+      setContactError(err.response?.data?.error || 'Not authorized to view contact info');
+    } finally {
+      setLoadingContact(false);
     }
   };
 
@@ -89,7 +117,7 @@ export default function LiveCaseDetailPage() {
     );
   }
 
-  const fullAddress = [caseData.street_address, caseData.city, caseData.state, caseData.zip_code].filter(Boolean).join(', ');
+  const fullAddress = [caseData.street_address || caseData.city, caseData.city, caseData.state, caseData.zip_code].filter(Boolean).join(', ');
 
   return (
     <div>
@@ -166,31 +194,62 @@ export default function LiveCaseDetailPage() {
           </div>
         )}
 
-        {/* Owner Contact */}
+        {/* Owner Contact — SECURED */}
         <div className="card" style={{ marginBottom: '0.75rem' }}>
           <div style={{ padding: '1rem' }}>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>Pet Owner</div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+              <FiShield size={12} /> Pet Owner
+            </div>
             <div style={{ fontWeight: 600, fontSize: '1rem', marginBottom: '0.5rem' }}>{caseData.owner_name}</div>
             
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-              {caseData.phone && (
-                <a href={`tel:${caseData.phone}`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary)', textDecoration: 'none', fontSize: '0.9rem', padding: '0.4rem 0.5rem', borderRadius: '6px', background: 'var(--primary-bg)', border: '1px solid rgba(4,107,210,0.15)' }}>
-                  <FiPhone size={14} /> {formatPhone(caseData.phone)}
-                </a>
-              )}
-              {caseData.email && (
-                <a href={`mailto:${caseData.email}`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary)', textDecoration: 'none', fontSize: '0.9rem', padding: '0.4rem 0.5rem', borderRadius: '6px', background: 'var(--primary-bg)', border: '1px solid rgba(4,107,210,0.15)' }}>
-                  <FiMail size={14} /> {caseData.email}
-                </a>
-              )}
-            </div>
+            {/* Contact info — only for verified pilots */}
+            {contactInfo ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                {contactInfo.phone && (
+                  <a href={`tel:${contactInfo.phone}`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary)', textDecoration: 'none', fontSize: '0.9rem', padding: '0.4rem 0.5rem', borderRadius: '6px', background: 'var(--primary-bg)', border: '1px solid rgba(4,107,210,0.15)' }}>
+                    <FiPhone size={14} /> {formatPhone(contactInfo.phone)}
+                  </a>
+                )}
+                {contactInfo.email && (
+                  <a href={`mailto:${contactInfo.email}`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary)', textDecoration: 'none', fontSize: '0.9rem', padding: '0.4rem 0.5rem', borderRadius: '6px', background: 'var(--primary-bg)', border: '1px solid rgba(4,107,210,0.15)' }}>
+                    <FiMail size={14} /> {contactInfo.email}
+                  </a>
+                )}
+              </div>
+            ) : isDronePilot && loadingContact ? (
+              <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Loading contact info...</div>
+            ) : isDronePilot && contactError ? (
+              <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', padding: '0.5rem 0.75rem', borderRadius: '6px', color: 'var(--danger)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <FiLock size={12} /> {contactError}
+              </div>
+            ) : caseData.has_contact_info ? (
+              <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', padding: '0.75rem', borderRadius: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
+                  <FiLock size={14} /> Contact info is private
+                </div>
+                {isAuthenticated ? (
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    Only verified drone pilots can view owner contact information.
+                    {user?.role === 'drone_pilot' && (
+                      <span> Get verified to access this data.</span>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    <Link to="/login" style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>Sign in</Link> as a verified pilot to view contact info.
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No contact info available</div>
+            )}
           </div>
         </div>
 
         {/* Actions */}
         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-          {caseData.phone && (
-            <a href={`tel:${caseData.phone}`} className="btn btn-accent" style={{ flex: 1, textDecoration: 'none' }}>
+          {contactInfo?.phone && (
+            <a href={`tel:${contactInfo.phone}`} className="btn btn-accent" style={{ flex: 1, textDecoration: 'none' }}>
               <FiPhone size={16} /> Call Owner
             </a>
           )}

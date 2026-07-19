@@ -16,6 +16,7 @@ import messageRoutes from './routes/messages.js';
 import mapRoutes from './routes/map.js';
 import notificationRoutes from './routes/notifications.js';
 import contentRoutes from './routes/content.js';
+import adminRoutes from './routes/admin.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -59,6 +60,7 @@ app.use('/api/cases', messageRoutes);
 app.use('/api/map', mapRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/content', contentRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

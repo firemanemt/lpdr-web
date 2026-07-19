@@ -17,6 +17,12 @@ import FAQsPage from './pages/FAQsPage';
 import AboutPage from './pages/AboutPage';
 import LiveCasesPage from './pages/LiveCasesPage';
 import LiveCaseDetailPage from './pages/LiveCaseDetailPage';
+import TermsPage from './pages/TermsPage';
+import PrivacyPage from './pages/PrivacyPage';
+import VerifyEmailPage from './pages/VerifyEmailPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import PilotVerificationPage from './pages/PilotVerificationPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 export default function App() {
@@ -54,6 +60,11 @@ export default function App() {
             <Route path="/about" element={<AboutPage />} />
             <Route path="/live" element={<LiveCasesPage />} />
             <Route path="/live/:id" element={<LiveCaseDetailPage />} />
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/verify-email" element={<VerifyEmailPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
 
             {/* Pet Owner Routes */}
             <Route path="/owner/dashboard" element={
@@ -76,6 +87,11 @@ export default function App() {
             <Route path="/pilot/dashboard" element={
               <ProtectedRoute requiredRole="drone_pilot">
                 <PilotDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/pilot/verification" element={
+              <ProtectedRoute requiredRole="drone_pilot">
+                <PilotVerificationPage />
               </ProtectedRoute>
             } />
 

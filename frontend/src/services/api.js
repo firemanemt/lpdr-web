@@ -39,6 +39,11 @@ export const authApi = {
   login: (email, password) => api.post('/auth/login', { email, password }),
   register: (data) => api.post('/auth/register', data),
   getMe: () => api.get('/auth/me'),
+  verifyEmail: (token) => api.post('/auth/verify-email', { token }),
+  resendVerification: (email) => api.post('/auth/resend-verification', { email }),
+  forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
+  resetPassword: (token, password) => api.post('/auth/reset-password', { token, password }),
+  changePassword: (currentPassword, newPassword) => api.post('/auth/change-password', { currentPassword, newPassword }),
 };
 
 // ============ Pilots ============
@@ -49,6 +54,8 @@ export const pilotApi = {
   updateProfile: (data) => api.put('/pilots/me/profile', data),
   toggleAvailability: (available) => api.put('/pilots/me/availability', { available }),
   updateLocation: (lat, lng, heading, speed) => api.post('/pilots/me/location', { lat, lng, heading, speed }),
+  submitVerification: (data) => api.post('/pilots/me/verification', data),
+  getVerification: () => api.get('/pilots/me/verification'),
 };
 
 // ============ Cases ============
@@ -79,11 +86,21 @@ export const mapApi = {
 export const contentApi = {
   getTestimonials: () => api.get('/content/testimonials'),
   getFaqs: () => api.get('/content/faqs'),
+  getCaseContact: (wpId) => api.get(`/content/live-cases/${wpId}/contact`),
 };
 
 // ============ Notifications ============
 export const notificationApi = {
   register: (token, platform) => api.post('/notifications/register', { token, platform }),
+};
+
+// ============ Admin ============
+export const adminApi = {
+  getStats: () => api.get('/admin/stats'),
+  getUsers: (params) => api.get('/admin/users', { params }),
+  getCases: (params) => api.get('/admin/cases', { params }),
+  getVerifications: () => api.get('/admin/verifications'),
+  reviewVerification: (id, status, notes) => api.post(`/admin/verifications/${id}/review`, { status, notes }),
 };
 
 export default api;

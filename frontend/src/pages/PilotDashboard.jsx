@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { caseApi, pilotApi } from '../services/api';
-import { FiToggleLeft, FiToggleRight, FiMapPin, FiStar, FiClock, FiPhone, FiDollarSign, FiChevronRight, FiRadio } from 'react-icons/fi';
+import { FiToggleLeft, FiToggleRight, FiMapPin, FiStar, FiClock, FiPhone, FiDollarSign, FiChevronRight, FiRadio, FiShield } from 'react-icons/fi';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 const statusConfig = {
@@ -80,6 +80,12 @@ export default function PilotDashboard() {
               <div style={{ fontSize: '0.75rem', color: available ? 'var(--success)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <span className={`status-dot ${available ? 'online' : 'offline'}`} />
                 {available ? 'Online & Available' : 'Offline'}
+                {profile?.verification_status === 'approved' && (
+                  <span style={{ marginLeft: '0.3rem', fontSize: '0.65rem', background: 'var(--success-bg)', color: 'var(--success)', padding: '0.1rem 0.35rem', borderRadius: '4px', border: '1px solid rgba(16,185,129,0.2)', fontWeight: 700 }}>✓ VERIFIED</span>
+                )}
+                {profile?.verification_status === 'pending' && (
+                  <span style={{ marginLeft: '0.3rem', fontSize: '0.65rem', background: 'var(--accent-bg)', color: 'var(--accent)', padding: '0.1rem 0.35rem', borderRadius: '4px', border: '1px solid rgba(250,145,24,0.2)', fontWeight: 700 }}>PENDING</span>
+                )}
               </div>
             </div>
           </div>
@@ -234,10 +240,19 @@ export default function PilotDashboard() {
                 <div style={{ fontWeight: 600, fontSize: '0.9rem', fontFamily: 'var(--font-mono)' }}>{profile?.response_time || '—'} min</div>
               </div>
               <div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Membership</div>
-                <div style={{ fontWeight: 600, fontSize: '0.9rem', textTransform: 'capitalize' }}>{profile?.membership_status || 'Inactive'}</div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Verification</div>
+                <div style={{ fontWeight: 600, fontSize: '0.9rem', textTransform: 'capitalize', color: profile?.verification_status === 'approved' ? 'var(--success)' : profile?.verification_status === 'pending' ? 'var(--accent)' : 'var(--text-muted)' }}>
+                  {profile?.verification_status === 'approved' ? '✓ Verified' : profile?.verification_status === 'pending' ? '⏳ Pending' : 'Not Submitted'}
+                </div>
               </div>
             </div>
+            {(!profile?.verification_status || profile?.verification_status === 'unsubmitted' || profile?.verification_status === 'rejected') && (
+              <div style={{ borderTop: '1px solid var(--border-subtle)', padding: '0.75rem 1rem' }}>
+                <Link to="/pilot/verification" className="btn btn-accent btn-sm" style={{ width: '100%', textDecoration: 'none' }}>
+                  <FiShield size={14} /> Get Verified to Appear on Map
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </div>
