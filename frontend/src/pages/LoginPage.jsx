@@ -1,0 +1,125 @@
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import toast from 'react-hot-toast';
+
+export default function LoginPage() {
+  const [email, setEmail] = useState('owner@demo.com');
+  const [password, setPassword] = useState('password123');
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErrors({});
+    
+    if (!email.trim()) return setErrors({ email: 'Email is required' });
+    if (!password) return setErrors({ password: 'Password is required' });
+
+    setLoading(true);
+    try {
+      const user = await login(email, password);
+      toast.success(`Welcome back, ${user.firstName}!`);
+      
+      if (user.role === 'pet_owner') navigate('/owner/dashboard');
+      else if (user.role === 'drone_pilot') navigate('/pilot/dashboard');
+      else navigate('/');
+    } catch (err) {
+      const msg = err.response?.data?.error || 'Login failed. Please try again.';
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const quickLogin = async (role) => {
+    setLoading(true);
+    try {
+      const creds = role === 'owner' 
+        ? { email: 'owner@demo.com', password: 'password123' }
+        : { email: 'pilot1@demo.com', password: 'password123' };
+      
+      setEmail(creds.email);
+      setPassword(creds.password);
+      
+      const user = await login(creds.email, creds.password);
+      toast.success(`Logged in as ${user.firstName}!`);
+      
+      if (user.role === 'pet_owner') navigate('/owner/dashboard');
+      else navigate('/pilot/dashboard');
+    } catch (err) {
+      toast.error('Quick login failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{ minHeight: 'calc(100vh - 200px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem' }}>
+      <div className="card" style={{ width: '100%', maxWidth: '440px' }}>
+        <div className="card-body" style={{ padding: '2.5rem' }}>
+          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+            <svg width="48" height="48" viewBox="0 0 40 40" fill="none" style={{ margin: '0 auto 1rem' }}>
+              <rect width="40" height="40" rx="10" fill="#059669"/>
+              <path d="M20 8C16 8 12 12 12 18C12 24 20 32 20 32C20 32 28 24 28 18C28 12 24 8 20 8Z" fill="white" opacity="0.9"/>
+              <path d="M20 14C22 14 24 16 24 18C24 22 20 26 20 26C20 26 16 22 16 18C16 16 18 14 20 14Z" fill="#059669"/>
+            </svg>
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.25rem' }}>Welcome Back</h1>
+            <p style={{ color: 'var(--gray-500)', fontSize: '0.95rem' }}>Sign in to your account</p>
+          </div>
+
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label className="form-label">Email</label>
+              <input
+                type="email"
+                className={`form-input ${errors.email ? 'error' : ''}`}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+              />
+              {errors.email && <div className="form-error">{errors.email}</div>}
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Password</label>
+              <input
+                type="password"
+                className={`form-input ${errors.password ? 'error' : ''}`}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Your password"
+              />
+              {errors.password && <div className="form-error">{errors.password}</div>}
+            </div>
+
+            <button type="submit" className="btn btn-primary btn-lg" style={{ width: '100%' }} disabled={loading}>
+              {loading ? 'Signing in...' : 'Sign In'}
+            </button>
+          </form>
+
+          {/* Demo Quick Logins */}
+          <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--gray-200)' }}>
+            <p style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--gray-500)', marginBottom: '0.75rem' }}>
+              Quick Demo Access
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button onClick={() => quickLogin('owner')} className="btn btn-secondary btn-sm" style={{ flex: 1 }} disabled={loading}>
+                Pet Owner Demo
+              </button>
+              <button onClick={() => quickLogin('pilot')} className="btn btn-secondary btn-sm" style={{ flex: 1 }} disabled={loading}>
+                Drone Pilot Demo
+              </button>
+            </div>
+          </div>
+
+          <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.9rem', color: 'var(--gray-500)' }}>
+            Don't have an account? <Link to="/register" style={{ color: 'var(--primary)', fontWeight: 600 }}>Sign up</Link>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,132 @@
+import { useState } from 'react';
+import { Link, useNavigate, Outlet } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { FiMenu, FiX, FiUser, FiLogOut, FiMapPin, FiClipboard, FiHome, FiMessageSquare } from 'react-icons/fi';
+
+export default function Layout() {
+  const { user, isAuthenticated, logout, isPetOwner, isDronePilot } = useAuth();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
+
+  const getDashboardLink = () => {
+    if (isPetOwner) return '/owner/dashboard';
+    if (isDronePilot) return '/pilot/dashboard';
+    return '/';
+  };
+
+  const getInitials = () => {
+    if (!user) return '?';
+    return `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase();
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <header className="app-header">
+        <div className="container">
+          <Link to="/" className="app-logo">
+            <svg width="36" height="36" viewBox="0 0 40 40" fill="none">
+              <rect width="40" height="40" rx="10" fill="#059669"/>
+              <path d="M20 8C16 8 12 12 12 18C12 24 20 32 20 32C20 32 28 24 28 18C28 12 24 8 20 8Z" fill="white" opacity="0.9"/>
+              <path d="M20 14C22 14 24 16 24 18C24 22 20 26 20 26C20 26 16 22 16 18C16 16 18 14 20 14Z" fill="#059669"/>
+              <circle cx="30" cy="10" r="6" fill="#f59e0b"/>
+              <path d="M29 8L29 12M27 10L31 10" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+            <span>LPDR</span>
+          </Link>
+
+          <button className="mobile-menu-toggle" onClick={() => setMenuOpen(!menuOpen)}>
+            {menuOpen ? <FiX size={24} /> : <FiMenu size={24} />}
+          </button>
+
+          <nav className={`nav-links ${menuOpen ? 'open' : ''}`}>
+            {isAuthenticated ? (
+              <>
+                <Link to="/map">Find Pilots</Link>
+                <Link to={getDashboardLink()}>Dashboard</Link>
+                {isPetOwner && <Link to="/cases/new">Report Lost Pet</Link>}
+                
+                <div className="user-menu">
+                  <Link to={getDashboardLink()} className="user-avatar" title={`${user?.firstName} ${user?.lastName}`}>
+                    {getInitials()}
+                  </Link>
+                  <button className="btn btn-secondary btn-sm" onClick={handleLogout}>
+                    <FiLogOut size={14} />
+                    Logout
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <Link to="/">Home</Link>
+                <Link to="/map">Find Pilots</Link>
+                <Link to="/about">About</Link>
+                <Link to="/faqs">FAQs</Link>
+                <Link to="/login" className="btn btn-primary btn-sm">Sign In</Link>
+                <Link to="/register" className="btn btn-secondary btn-sm">Get Started</Link>
+              </>
+            )}
+          </nav>
+        </div>
+      </header>
+
+      <main className="flex-1">
+        <Outlet />
+      </main>
+
+      <footer style={{
+        background: '#111827',
+        color: '#9ca3af',
+        padding: '2rem 0',
+        marginTop: 'auto',
+      }}>
+        <div className="container">
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '2rem',
+            marginBottom: '2rem',
+          }}>
+            <div>
+              <h4 style={{ color: 'white', marginBottom: '0.75rem' }}>Lost Pet Drone Recovery</h4>
+              <p style={{ fontSize: '0.9rem', lineHeight: 1.6 }}>
+                Connecting pet owners with drone pilots to find lost pets. 
+                Lost pets. Found faster.
+              </p>
+            </div>
+            <div>
+              <h4 style={{ color: 'white', marginBottom: '0.75rem' }}>Quick Links</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.9rem' }}>
+                <Link to="/" style={{ color: '#9ca3af', textDecoration: 'none' }}>Home</Link>
+                <Link to="/map" style={{ color: '#9ca3af', textDecoration: 'none' }}>Find a Pilot</Link>
+                <Link to="/about" style={{ color: '#9ca3af', textDecoration: 'none' }}>About Us</Link>
+                <Link to="/faqs" style={{ color: '#9ca3af', textDecoration: 'none' }}>FAQs</Link>
+              </div>
+            </div>
+            <div>
+              <h4 style={{ color: 'white', marginBottom: '0.75rem' }}>Contact</h4>
+              <p style={{ fontSize: '0.9rem' }}>
+                Based in Oneonta, NY<br />
+                <a href="mailto:support@lostpetdronerecovery.com" style={{ color: '#10b981', textDecoration: 'none' }}>
+                  support@lostpetdronerecovery.com
+                </a>
+              </p>
+            </div>
+          </div>
+          <div style={{
+            borderTop: '1px solid #374151',
+            paddingTop: '1.5rem',
+            textAlign: 'center',
+            fontSize: '0.85rem',
+          }}>
+            &copy; {new Date().getFullYear()} Lost Pet Drone Recovery. All rights reserved.
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
