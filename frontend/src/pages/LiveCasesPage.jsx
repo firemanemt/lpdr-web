@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { FiRadio, FiMapPin, FiClock, FiEye, FiRefreshCw } from 'react-icons/fi';
+import { Link, useNavigate } from 'react-router-dom';
+import { FiRadio, FiMapPin, FiClock, FiEye, FiRefreshCw, FiChevronRight } from 'react-icons/fi';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 export default function LiveCasesPage() {
   const [cases, setCases] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => { loadCases(); }, []);
 
@@ -85,7 +86,7 @@ export default function LiveCasesPage() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               {cases.map((c, i) => (
-                <div key={c.id} className="card card-interactive fade-in">
+                <div key={c.id} className="card card-interactive fade-in" style={{ cursor: 'pointer' }} onClick={() => navigate(`/live/${c.id}`)}>
                   <div style={{ padding: '0.85rem 1rem', display: 'flex', gap: '0.75rem' }}>
                     {/* Photo or emoji */}
                     {c.photo_thumb ? (
@@ -103,7 +104,10 @@ export default function LiveCasesPage() {
                         <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
                           {c.pet_name}
                         </div>
-                        <span className="badge badge-red" style={{ flexShrink: 0 }}>LOST</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <span className="badge badge-red" style={{ flexShrink: 0 }}>LOST</span>
+                          <FiChevronRight size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                        </div>
                       </div>
                       
                       {c.pet_breed && c.pet_breed !== c.pet_type && (
