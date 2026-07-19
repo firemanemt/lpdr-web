@@ -1,0 +1,12 @@
+{
+  "name": "lpdr-web",
+  "version": "1.0.0",
+  "description": "Lost Pet Drone Recovery - Web Application",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build",
+    "start": "cd backend && npm install && node src/index.js",
+    "dev": "cd backend && node --watch src/index.js"
+  }
+}
