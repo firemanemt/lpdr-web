@@ -66,6 +66,20 @@ app.use('/api/admin', adminRoutes);
 // Health check
 app.get('/api/health', (req, res) => {
   const dbUrl = config.database.url;
+  // Show all DB-related env vars (masked for security)
+  const dbEnvVars = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    if (key.match(/DATABASE|POSTGRES|PGHOST|PGPORT|PGUSER|PGDATABASE|PGPASSWORD/i)) {
+      // Mask password in URL
+      if (value && value.startsWith('postgresql://')) {
+        dbEnvVars[key] = value.substring(0, 30) + '...';
+      } else if (key.match(/PASSWORD/i)) {
+        dbEnvVars[key] = value ? '***set***' : 'NOT SET';
+      } else {
+        dbEnvVars[key] = value || 'NOT SET';
+      }
+    }
+  }
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
@@ -73,8 +87,8 @@ app.get('/api/health', (req, res) => {
     mode: config.nodeEnv,
     database: !!dbUrl,
     smtp: !!(config.smtp?.host && config.smtp?.user),
-    // Debug: show what DATABASE_URL looks like (mask the password)
     databaseUrlPreview: dbUrl ? dbUrl.substring(0, 30) + '...' : 'NOT SET',
+    envVars: dbEnvVars,
   });
 });
 
