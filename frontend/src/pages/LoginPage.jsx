@@ -26,32 +26,11 @@ export default function LoginPage() {
       
       if (user.role === 'pet_owner') navigate('/owner/dashboard');
       else if (user.role === 'drone_pilot') navigate('/pilot/dashboard');
+      else if (user.role === 'admin') navigate('/admin');
       else navigate('/');
     } catch (err) {
       const msg = err.response?.data?.error || 'Login failed. Please try again.';
       toast.error(msg);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const quickLogin = async (role) => {
-    setLoading(true);
-    try {
-      const creds = role === 'owner' 
-        ? { email: 'owner@demo.com', password: 'password123' }
-        : { email: 'pilot1@demo.com', password: 'password123' };
-      
-      setEmail(creds.email);
-      setPassword(creds.password);
-      
-      const user = await login(creds.email, creds.password);
-      toast.success(`Logged in as ${user.firstName}!`);
-      
-      if (user.role === 'pet_owner') navigate('/owner/dashboard');
-      else navigate('/pilot/dashboard');
-    } catch (err) {
-      toast.error('Quick login failed');
     } finally {
       setLoading(false);
     }
@@ -114,25 +93,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Demo Quick Logins */}
-        <div style={{ marginTop: '1rem' }}>
-          <div className="section-title" style={{ marginBottom: '0.5rem' }}>
-            Quick Demo Access
-          </div>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button onClick={() => quickLogin('owner')} className="btn btn-secondary btn-sm" style={{ flex: 1 }} disabled={loading}>
-              🐾 Pet Owner
-            </button>
-            <button onClick={() => quickLogin('pilot')} className="btn btn-secondary btn-sm" style={{ flex: 1 }} disabled={loading}>
-              🛸 Drone Pilot
-            </button>
-          </div>
-          <div style={{ textAlign: 'center', marginTop: '0.5rem', fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-            Demo mode — data resets on restart
-          </div>
-        </div>
-
-        <p style={{ textAlign: 'center', marginTop: '1.25rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+        <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
           Don't have an account? <Link to="/register" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>Sign up</Link>
         </p>
       </div>
