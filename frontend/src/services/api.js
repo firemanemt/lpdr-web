@@ -102,6 +102,8 @@ export const adminApi = {
   getCases: (params) => api.get('/admin/cases', { params }),
   getVerifications: () => api.get('/admin/verifications'),
   reviewVerification: (id, status, notes) => api.post(`/admin/verifications/${id}/review`, { status, notes }),
+  assignPilot: (caseId, pilotId) => api.post(`/admin/cases/${caseId}/assign`, { pilotId }),
+  broadcast: (message) => api.post('/admin/broadcast', { message }),
 };
 
 export default api;

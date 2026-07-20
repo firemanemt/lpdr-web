@@ -125,8 +125,8 @@ export async function sendVerificationRejectedEmail(email, firstName, notes) {
   return await sendEmail(email, subject, html);
 }
 
-// Internal send function
-async function sendEmail(to, subject, html) {
+// Internal send function (also available for admin broadcast)
+export async function sendEmail(to, subject, html) {
   const transport = getTransporter();
 
   if (transport) {
