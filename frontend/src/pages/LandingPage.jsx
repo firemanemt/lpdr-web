@@ -1,13 +1,77 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { FiSearch, FiMapPin, FiUsers, FiHeart, FiChevronRight, FiRadio, FiClock } from 'react-icons/fi';
+import { FiSearch, FiMapPin, FiUsers, FiHeart, FiChevronRight, FiRadio } from 'react-icons/fi';
 import { useAuth } from '../contexts/AuthContext';
 import { useState, useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
+import { contentApi } from '../services/api';
+
+// WP website pilot icon for mini-map (orange circle)
+const miniPilotIcon = L.divIcon({
+  className: 'mini-wp-pilot-icon',
+  html: `<div style="
+    width: 24px; height: 24px; border-radius: 50%;
+    background: #fa9118; border: 2px solid #d97a0a;
+    box-shadow: 0 0 10px rgba(250,145,24,0.5);
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-weight: 700; font-size: 0.55rem;
+  ">🐾</div>`,
+  iconSize: [24, 24],
+  iconAnchor: [12, 12],
+  popupAnchor: [0, -14],
+});
+
+function LandingMap({ pilots }) {
+  if (!pilots.length) {
+    return (
+      <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+        Loading pilots...
+      </div>
+    );
+  }
+  return (
+    <>
+      <MapContainer
+        center={[39.8283, -98.5795]}
+        zoom={4}
+        style={{ height: '100%', width: '100%' }}
+        zoomControl={false}
+        attributionControl={false}
+        dragging={false}
+        scrollWheelZoom={false}
+        doubleClickZoom={false}
+        touchZoom={false}
+      >
+        <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+        {pilots.map(pilot => (
+          <Marker key={pilot.id} position={[parseFloat(pilot.lat), parseFloat(pilot.lng)]} icon={miniPilotIcon}>
+            <Popup maxWidth={220} minWidth={180}>
+              <div style={{ fontFamily: "'Cabin Condensed', sans-serif", padding: '0.15rem' }}>
+                <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#111827', marginBottom: '0.2rem' }}>🐾 {pilot.name}</div>
+                {pilot.city && pilot.state && (
+                  <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>{pilot.city}, {pilot.state}</div>
+                )}
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+      </MapContainer>
+      <style>{`
+        .mini-wp-pilot-icon { background: none !important; border: none !important; }
+        .leaflet-container { background: #060a13 !important; }
+        .leaflet-popup-content-wrapper { background: #111a2e !important; color: #f1f5f9 !important; border-radius: 10px !important; border: 1px solid #253352 !important; }
+        .leaflet-popup-tip { background: #111a2e !important; }
+      `}</style>
+    </>
+  );
+}
 
 export default function LandingPage() {
   const { isAuthenticated, isPetOwner } = useAuth();
   const [liveStats, setLiveStats] = useState(null);
   const [liveCount, setLiveCount] = useState(null);
   const [recentCases, setRecentCases] = useState([]);
+  const [landingPilots, setLandingPilots] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -17,11 +81,16 @@ export default function LandingPage() {
       setLiveCount(d.total || 0);
       setRecentCases((d.cases || []).slice(0, 3));
     }).catch(() => {});
+    // Fetch real WP pilots for the mini map
+    contentApi.getWPPilots().then(res => {
+      const pilots = (res.data.pilots || []).filter(p => p.lat && p.lng);
+      setLandingPilots(pilots);
+    }).catch(() => {});
   }, []);
 
   const stats = [
     { value: liveStats?.casesReceived || '501', label: 'Cases', icon: '📋', live: !!liveStats?.casesReceived },
-    { value: liveStats?.activePilots || '50+', label: 'Pilots', icon: '🛸' },
+    { value: liveStats?.activePilots || '25', label: 'Pilots', icon: '🛸' },
     { value: liveStats?.recoveryRate || '85%', label: 'Recovery', icon: '✓' },
     { value: liveStats?.avgResponseTime || '48hr', label: 'Avg Time', icon: '⏱' },
   ];
@@ -100,7 +169,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Map Preview */}
+      {/* Map Preview — Real Leaflet map with WP pilots */}
       <section className="section">
         <div className="container">
           <div className="section-title">
@@ -108,45 +177,8 @@ export default function LandingPage() {
             Pilots Near You
           </div>
           
-          <div className="card" style={{ height: '300px', background: 'var(--bg-secondary)', position: 'relative', overflow: 'hidden' }}>
-            {/* Grid */}
-            <div style={{ position: 'absolute', inset: 0, opacity: 0.15 }}>
-              {[10, 20, 30, 40, 50, 60, 70, 80, 90].map((p, i) => (
-                <div key={`h${i}`} style={{ position: 'absolute', left: 0, right: 0, top: `${p}%`, height: '1px', background: 'var(--primary)' }} />
-              ))}
-              {[10, 20, 30, 40, 50, 60, 70, 80, 90].map((p, i) => (
-                <div key={`v${i}`} style={{ position: 'absolute', top: 0, bottom: 0, left: `${p}%`, width: '1px', background: 'var(--primary)' }} />
-              ))}
-            </div>
-            
-            {/* Pilot dots */}
-            {[
-              { left: '25%', top: '30%', active: true },
-              { left: '55%', top: '45%', active: true },
-              { left: '70%', top: '25%', active: false },
-              { left: '40%', top: '65%', active: true },
-              { left: '80%', top: '60%', active: false },
-              { left: '15%', top: '70%', active: true },
-            ].map((dot, i) => (
-              <div key={i} style={{
-                position: 'absolute', left: dot.left, top: dot.top,
-                width: '14px', height: '14px', borderRadius: '50%',
-                background: dot.active ? 'var(--primary)' : 'var(--text-muted)',
-                boxShadow: dot.active ? '0 0 12px var(--primary-glow)' : 'none',
-                transform: 'translate(-50%, -50%)',
-                zIndex: 2,
-              }} />
-            ))}
-            
-            {/* Legend */}
-            <div style={{ position: 'absolute', bottom: '0.75rem', left: '0.75rem', background: 'var(--bg-card)', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--border-subtle)', fontSize: '0.75rem', zIndex: 3 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem' }}>
-                <span className="status-dot online" /> <span style={{ color: 'var(--text-secondary)' }}>Available</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <span className="status-dot offline" /> <span style={{ color: 'var(--text-secondary)' }}>Offline</span>
-              </div>
-            </div>
+          <div className="card" style={{ height: '300px', background: 'var(--bg-secondary)', position: 'relative', overflow: 'hidden', padding: 0 }}>
+            <LandingMap pilots={landingPilots} />
           </div>
 
           <div style={{ textAlign: 'center', marginTop: '1rem' }}>
