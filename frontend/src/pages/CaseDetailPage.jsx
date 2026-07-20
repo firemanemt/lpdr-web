@@ -25,6 +25,7 @@ export default function CaseDetailPage() {
   const [caseData, setCaseData] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
+  const [chatImage, setChatImage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showReview, setShowReview] = useState(false);
   const [reviewRating, setReviewRating] = useState(5);
@@ -58,11 +59,13 @@ export default function CaseDetailPage() {
   };
 
   const sendMessage = async () => {
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() && !chatImage) return;
     const text = newMessage;
+    const image = chatImage;
     setNewMessage('');
+    setChatImage(null);
     try {
-      const res = await messageApi.send(id, text);
+      const res = await messageApi.send(id, text, image);
       const sentMsg = res.data.message;
       setMessages(prev => [...prev, sentMsg]);
       const socket = getSocket();
@@ -70,7 +73,17 @@ export default function CaseDetailPage() {
     } catch (err) {
       toast.error('Failed to send message');
       setNewMessage(text);
+      setChatImage(image);
     }
+  };
+
+  const handleChatImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => setChatImage(ev.target.result);
+    reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   const handleKeyDown = (e) => {
@@ -170,6 +183,19 @@ export default function CaseDetailPage() {
           <div className="fade-in">
             {/* Case Info */}
             <div className="card" style={{ marginBottom: '0.75rem' }}>
+              {/* Photos */}
+              {caseData.photos && caseData.photos.length > 0 && (
+                <div style={{ display: 'flex', gap: '0.4rem', padding: '0.75rem 1rem 0', overflowX: 'auto' }}>
+                  {caseData.photos.map((photo, i) => (
+                    <div key={photo.id || i} style={{
+                      width: '80px', height: '80px', borderRadius: '8px', overflow: 'hidden',
+                      border: '1px solid var(--border-subtle)', flexShrink: 0, cursor: 'pointer',
+                    }} onClick={() => window.open(photo.url, '_blank')}>
+                      <img src={photo.url} alt={`Photo ${i+1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </div>
+                  ))}
+                </div>
+              )}
               <div style={{ padding: '1rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 {[
                   { label: 'Pet Name', value: caseData.pet_name },
@@ -227,7 +253,12 @@ export default function CaseDetailPage() {
                     const sent = msg.sender_id === user?.id;
                     return (
                       <div key={msg.id || i} className={`chat-message ${sent ? 'sent' : 'received'} fade-in`}>
-                        <div>{msg.text}</div>
+                        {msg.image_url && (
+                          <div style={{ marginBottom: msg.text ? '0.4rem' : 0 }}>
+                            <img src={msg.image_url} alt="Shared image" style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }} />
+                          </div>
+                        )}
+                        {msg.text && <div>{msg.text}</div>}
                         <div className="time">{new Date(msg.created_at).toLocaleTimeString()}</div>
                       </div>
                     );
@@ -235,8 +266,22 @@ export default function CaseDetailPage() {
                   <div ref={messagesEndRef} />
                 </div>
                 <div className="chat-input">
+                  {chatImage && (
+                    <div style={{ position: 'relative', padding: '0.25rem' }}>
+                      <img src={chatImage} alt="Upload" style={{ height: '40px', borderRadius: '4px', border: '1px solid var(--border-subtle)' }} />
+                      <button onClick={() => setChatImage(null)} style={{
+                        position: 'absolute', top: 0, right: 0, width: '18px', height: '18px',
+                        borderRadius: '50%', background: 'var(--danger)', color: 'white', border: 'none',
+                        fontSize: '0.6rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>✕</button>
+                    </div>
+                  )}
+                  <label style={{ cursor: 'pointer', color: 'var(--text-muted)', padding: '0 0.5rem' }}>
+                    <input type="file" accept="image/*" onChange={handleChatImageUpload} style={{ display: 'none' }} />
+                    📷
+                  </label>
                   <input value={newMessage} onChange={e => setNewMessage(e.target.value)} onKeyDown={handleKeyDown} placeholder="Type a message..." disabled={!caseData.pilot_id && isPetOwner} />
-                  <button onClick={sendMessage} disabled={!newMessage.trim()}><FiSend size={16} /></button>
+                  <button onClick={sendMessage} disabled={!newMessage.trim() && !chatImage}><FiSend size={16} /></button>
                 </div>
               </div>
             ) : (

@@ -650,6 +650,23 @@ class InMemoryStorage {
     }
   }
 
+  // === CASE PHOTOS ===
+  async addCasePhoto(caseId, url, uploadedBy) {
+    const photo = {
+      id: uuidv4(),
+      case_id: caseId,
+      url,
+      uploaded_by: uploadedBy,
+      created_at: new Date(),
+    };
+    this.casePhotos.push(photo);
+    return photo;
+  }
+
+  async getCasePhotos(caseId) {
+    return this.casePhotos.filter(p => p.case_id === caseId);
+  }
+
   // === ADMIN METHODS ===
   async getAllUsers(role, limit = 50, offset = 0) {
     let filtered = this.users;

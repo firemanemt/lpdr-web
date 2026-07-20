@@ -19,9 +19,10 @@ router.get('/:caseId/messages', authenticate, async (req, res, next) => {
     const messages = await storage.getMessages(req.params.caseId);
     
     // Enrich with sender info
-    const enriched = messages.map(m => {
-      const sender = storage.users.find(u => u.id === m.sender_id);
-      return {
+    const enriched = [];
+    for (const m of messages) {
+      const sender = await storage.findUserById(m.sender_id);
+      enriched.push({
         ...m,
         sender: sender ? {
           id: sender.id,
@@ -29,8 +30,8 @@ router.get('/:caseId/messages', authenticate, async (req, res, next) => {
           lastName: sender.last_name,
           role: sender.role,
         } : null,
-      };
-    });
+      });
+    }
 
     res.json({ messages: enriched });
   } catch (err) {
@@ -55,10 +56,8 @@ router.post('/:caseId/messages', authenticate, async (req, res, next) => {
     }
 
     const message = await storage.sendMessage(req.params.caseId, req.userId, text, imageUrl);
-    
-    // In production: emit via WebSocket here
 
-    const sender = storage.users.find(u => u.id === message.sender_id);
+    const sender = await storage.findUserById(message.sender_id);
     res.status(201).json({
       message: {
         ...message,

@@ -547,6 +547,28 @@ class DatabaseStorage {
   }
 
   // ============================
+  // CASE PHOTOS
+  // ============================
+
+  async addCasePhoto(caseId, url, uploadedBy) {
+    const id = uuidv4();
+    const result = await this.pool.query(
+      `INSERT INTO case_photos (id, case_id, url, uploaded_by)
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [id, caseId, url, uploadedBy || null]
+    );
+    return result.rows[0];
+  }
+
+  async getCasePhotos(caseId) {
+    const result = await this.pool.query(
+      'SELECT * FROM case_photos WHERE case_id = $1 ORDER BY created_at ASC',
+      [caseId]
+    );
+    return result.rows;
+  }
+
+  // ============================
   // ADMIN METHODS
   // ============================
 

@@ -7,7 +7,7 @@ export const registerSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   phone: z.string().min(10, 'Phone number must be at least 10 digits').optional(),
-  role: z.enum(['pet_owner', 'drone_pilot']),
+  role: z.enum(['pet_owner', 'drone_pilot', 'admin']),
   agreeToTerms: z.literal(true, { errorMap: () => ({ message: 'You must agree to the Terms of Service' }) }),
   // Pilot verification fields (optional at registration)
   faaCertNumber: z.string().optional(),
@@ -39,6 +39,7 @@ export const createCaseSchema = z.object({
   temperament: z.enum(['friendly', 'skittish', 'aggressive', 'unknown']).optional(),
   dangerNotes: z.string().optional(),
   urgency: z.enum(['low', 'medium', 'high', 'critical']).default('medium'),
+  photos: z.array(z.string()).optional(), // Base64 data URLs
 });
 
 // Pilot profile validation

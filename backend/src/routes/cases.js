@@ -10,31 +10,41 @@ const router = Router();
 // POST /api/cases — Submit a new lost pet case
 router.post('/', authenticate, requireRole('pet_owner'), validate(createCaseSchema), async (req, res, next) => {
   try {
+    const { photos, ...caseFields } = req.validatedBody;
     const caseData = {
-      ...req.validatedBody,
+      ...caseFields,
       ownerId: req.userId,
     };
 
     const newCase = await storage.createCase(caseData);
 
+    // Save photos if provided
+    if (photos && photos.length > 0) {
+      for (const photoUrl of photos.slice(0, 5)) { // Max 5 photos
+        await storage.addCasePhoto(newCase.id, photoUrl, req.userId);
+      }
+    }
+
     // Transition to "notifying" status
     await storage.updateCase(newCase.id, { status: 'notifying' });
     await storage.addTimelineEntry(newCase.id, 'notifying', 'Notifying nearby pilots...', null);
 
-    // In production: trigger push notifications to nearby pilots
+    // Notify nearby pilots
     const nearbyPilots = await storage.getAvailablePilots(
       caseData.lastSeenLat,
       caseData.lastSeenLng,
       caseData.searchRadius || 25
     );
 
-    // Send notifications to nearby pilots
     notifyNearbyPilots(newCase, nearbyPilots).catch(err => 
       console.warn('Notification error:', err.message)
     );
 
+    // Load photos for response
+    const casePhotos = await storage.getCasePhotos(newCase.id);
+
     res.status(201).json({
-      case: newCase,
+      case: { ...newCase, photos: casePhotos },
       nearbyPilots: nearbyPilots.length,
       message: 'Case submitted! Notifying nearby pilots.',
     });
@@ -47,20 +57,25 @@ router.post('/', authenticate, requireRole('pet_owner'), validate(createCaseSche
 router.get('/', authenticate, async (req, res, next) => {
   try {
     const cases = await storage.getCasesForUser(req.userId, req.user.role);
-    const enriched = cases.map(c => {
-      const timeline = storage.caseTimeline.filter(t => t.case_id === c.id);
-      const owner = storage.users.find(u => u.id === c.owner_id);
-      const pilot = c.pilot_id ? storage.users.find(u => u.id === c.pilot_id) : null;
-      const messages = storage.messages.filter(m => m.case_id === c.id);
+    
+    const enriched = [];
+    for (const c of cases) {
+      const timeline = await storage.getTimeline(c.id);
+      const owner = await storage.findUserById(c.owner_id);
+      const pilot = c.pilot_id ? await storage.findUserById(c.pilot_id) : null;
+      const messages = await storage.getMessages(c.id);
       const unread = messages.filter(m => m.sender_id !== req.userId && !m.read).length;
-      return {
+      const photos = await storage.getCasePhotos(c.id);
+
+      enriched.push({
         ...c,
         ownerName: owner ? `${owner.first_name} ${owner.last_name}` : 'Unknown',
         pilotName: pilot ? `${pilot.first_name} ${pilot.last_name}` : null,
         unreadMessages: unread,
         timeline,
-      };
-    });
+        photos,
+      });
+    }
 
     res.json({ cases: enriched });
   } catch (err) {
@@ -85,8 +100,9 @@ router.get('/:id', authenticate, async (req, res, next) => {
 
     const timeline = await storage.getTimeline(caseItem.id);
     const messages = await storage.getMessages(caseItem.id);
-    const owner = storage.users.find(u => u.id === caseItem.owner_id);
-    const pilot = caseItem.pilot_id ? storage.users.find(u => u.id === caseItem.pilot_id) : null;
+    const owner = await storage.findUserById(caseItem.owner_id);
+    const pilot = caseItem.pilot_id ? await storage.findUserById(caseItem.pilot_id) : null;
+    const photos = await storage.getCasePhotos(caseItem.id);
 
     res.json({
       case: {
@@ -94,7 +110,8 @@ router.get('/:id', authenticate, async (req, res, next) => {
         owner: owner ? { id: owner.id, firstName: owner.first_name, lastName: owner.last_name, email: owner.email, phone: owner.phone } : null,
         pilot: pilot ? { id: pilot.id, firstName: pilot.first_name, lastName: pilot.last_name, email: pilot.email, phone: pilot.phone } : null,
         timeline,
-        messages: messages.slice(-50), // Last 50 messages
+        messages: messages.slice(-50),
+        photos,
       },
     });
   } catch (err) {
@@ -107,7 +124,7 @@ router.post('/:id/accept', authenticate, requireRole('drone_pilot'), async (req,
   try {
     const caseItem = await storage.getCaseById(req.params.id);
     if (!caseItem) throw new AppError('Case not found', 404);
-    if (caseItem.status !== 'notifying') throw new AppError('Case is not available for acceptance', 400);
+    if (caseItem.status !== 'notifying' && caseItem.status !== 'submitted') throw new AppError('Case is not available for acceptance', 400);
 
     await storage.updateCase(caseItem.id, { pilot_id: req.userId, status: 'matched' });
     await storage.addTimelineEntry(caseItem.id, 'matched', `Pilot accepted the case`, req.userId);
@@ -195,8 +212,9 @@ router.post('/:id/review', authenticate, requireRole('pet_owner'), async (req, r
     }
 
     // Check if already reviewed
-    const existingReview = storage.reviews.find(r => r.case_id === caseItem.id);
-    if (existingReview) throw new AppError('Already reviewed this case', 409);
+    const existingReviews = await storage.getReviewsForPilot(caseItem.pilot_id);
+    const alreadyReviewed = existingReviews.find(r => r.case_id === caseItem.id);
+    if (alreadyReviewed) throw new AppError('Already reviewed this case', 409);
 
     const review = await storage.createReview({
       caseId: caseItem.id,
@@ -209,6 +227,34 @@ router.post('/:id/review', authenticate, requireRole('pet_owner'), async (req, r
     await storage.updateCase(caseItem.id, { status: 'reviewed' });
 
     res.status(201).json({ review });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/cases/:id/photos — Add photos to a case
+router.post('/:id/photos', authenticate, async (req, res, next) => {
+  try {
+    const { photos } = req.body;
+    if (!photos || !Array.isArray(photos) || photos.length === 0) {
+      throw new AppError('At least one photo is required', 400);
+    }
+
+    const caseItem = await storage.getCaseById(req.params.id);
+    if (!caseItem) throw new AppError('Case not found', 404);
+
+    // Only owner or assigned pilot can add photos
+    if (caseItem.owner_id !== req.userId && caseItem.pilot_id !== req.userId && req.user.role !== 'admin') {
+      throw new AppError('Access denied', 403);
+    }
+
+    const saved = [];
+    for (const photoUrl of photos.slice(0, 5)) {
+      const photo = await storage.addCasePhoto(caseItem.id, photoUrl, req.userId);
+      saved.push(photo);
+    }
+
+    res.status(201).json({ photos: saved });
   } catch (err) {
     next(err);
   }

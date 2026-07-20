@@ -4,7 +4,7 @@ import { caseApi } from '../services/api';
 import toast from 'react-hot-toast';
 import { FiArrowLeft, FiArrowRight, FiCheck, FiSend } from 'react-icons/fi';
 
-const steps = ['Pet Info', 'Location', 'Details', 'Review'];
+const steps = ['Pet Info', 'Photos', 'Location', 'Details', 'Review'];
 
 export default function SubmitCasePage() {
   const [step, setStep] = useState(0);
@@ -16,15 +16,44 @@ export default function SubmitCasePage() {
     microchip: '', distinctiveMarks: '', lastSeenAddress: '', lastSeenLat: 0,
     lastSeenLng: 0, lastSeenDate: new Date().toISOString().slice(0, 16),
     searchRadius: 10, circumstances: '', temperament: 'unknown', dangerNotes: '', urgency: 'medium',
+    photos: [],
   });
 
   const update = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
+
+  const handlePhotoUpload = (e) => {
+    const files = Array.from(e.target.files);
+    if (form.photos.length + files.length > 5) {
+      toast.error('Maximum 5 photos allowed');
+      return;
+    }
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setForm(prev => ({
+          ...prev,
+          photos: [...prev.photos, { data: ev.target.result, name: file.name }].slice(0, 5),
+        }));
+      };
+      reader.readAsDataURL(file);
+    });
+    e.target.value = '';
+  };
+
+  const removePhoto = (index) => {
+    setForm(prev => ({
+      ...prev,
+      photos: prev.photos.filter((_, i) => i !== index),
+    }));
+  };
 
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
       const payload = {
-        ...form, petWeight: form.petWeight ? parseFloat(form.petWeight) : undefined,
+        ...form,
+        photos: form.photos.map(p => p.data),
+        petWeight: form.petWeight ? parseFloat(form.petWeight) : undefined,
         searchRadius: parseInt(form.searchRadius),
         lastSeenDate: new Date(form.lastSeenDate).toISOString(),
         lastSeenLat: form.lastSeenLat || 40.7128, lastSeenLng: form.lastSeenLng || -74.0060,
@@ -41,7 +70,7 @@ export default function SubmitCasePage() {
 
   const canProceed = () => {
     if (step === 0) return form.petName.trim() && form.petType;
-    if (step === 1) return form.lastSeenAddress.trim() && form.lastSeenDate;
+    if (step === 2) return form.lastSeenAddress.trim() && form.lastSeenDate;
     return true;
   };
 
@@ -92,6 +121,50 @@ export default function SubmitCasePage() {
 
       case 1: return (
         <div className="fade-in">
+          <h3 style={{ marginBottom: '1.25rem', fontSize: '1.05rem' }}>Add photos of your pet</h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>
+            Photos help pilots identify your pet from the air. Up to 5 photos.
+          </p>
+          
+          {form.photos.length > 0 && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginBottom: '1rem' }}>
+              {form.photos.map((photo, i) => (
+                <div key={i} style={{ position: 'relative', aspectRatio: '1', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
+                  <img src={photo.data} alt={photo.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <button onClick={() => removePhoto(i)} style={{
+                    position: 'absolute', top: '4px', right: '4px',
+                    width: '24px', height: '24px', borderRadius: '50%',
+                    background: 'rgba(0,0,0,0.7)', color: 'white', border: 'none',
+                    cursor: 'pointer', fontSize: '0.7rem', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center',
+                  }}>✕</button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {form.photos.length < 5 && (
+            <label style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              justifyContent: 'center', padding: '2rem', borderRadius: '8px',
+              border: '2px dashed var(--border-default)', cursor: 'pointer',
+              background: 'var(--bg-input)', transition: 'all 0.2s',
+            }}>
+              <input type="file" accept="image/*" multiple onChange={handlePhotoUpload} style={{ display: 'none' }} />
+              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📸</div>
+              <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Tap to add photos</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>{5 - form.photos.length} remaining</div>
+            </label>
+          )}
+
+          <div style={{ background: 'var(--primary-bg)', border: '1px solid rgba(4,107,210,0.2)', padding: '0.75rem', borderRadius: '8px', marginTop: '1rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+            💡 Tip: Include a clear face shot and a full body photo. This helps pilots spot your pet from the air.
+          </div>
+        </div>
+      );
+
+      case 2: return (
+        <div className="fade-in">
           <h3 style={{ marginBottom: '1.25rem', fontSize: '1.05rem' }}>Where was your pet last seen?</h3>
           <div className="form-group">
             <label className="form-label">Address *</label>
@@ -111,7 +184,7 @@ export default function SubmitCasePage() {
         </div>
       );
 
-      case 2: return (
+      case 3: return (
         <div className="fade-in">
           <h3 style={{ marginBottom: '1.25rem', fontSize: '1.05rem' }}>Circumstances & Details</h3>
           <div className="form-group">
@@ -154,7 +227,7 @@ export default function SubmitCasePage() {
         </div>
       );
 
-      case 3: return (
+      case 4: return (
         <div className="fade-in">
           <h3 style={{ marginBottom: '1.25rem', fontSize: '1.05rem' }}>Review & Submit</h3>
           <div className="card" style={{ marginBottom: '1rem', background: 'var(--bg-secondary)' }}>
@@ -186,6 +259,18 @@ export default function SubmitCasePage() {
                 <div style={{ gridColumn: '1 / -1' }}>
                   <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Circumstances</div>
                   <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{form.circumstances}</div>
+                </div>
+              )}
+              {form.photos.length > 0 && (
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>Photos ({form.photos.length})</div>
+                  <div style={{ display: 'flex', gap: '0.4rem' }}>
+                    {form.photos.map((p, i) => (
+                      <div key={i} style={{ width: '48px', height: '48px', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
+                        <img src={p.data} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
