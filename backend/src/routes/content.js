@@ -114,11 +114,13 @@ router.get('/stats', async (req, res) => {
     const casesReceived = totalCaseCount || Math.max(cases.length, 130);
     const activePilots = wpPilots.length || 50;
 
+    // Count unique states from real pilot data
+    const statesCovered = [...new Set(wpPilots.map(p => p.state).filter(Boolean))].length;
+
     res.json({
       casesReceived,
       activePilots,
-      recoveryRate: '85%',
-      avgResponseTime: '48hrs',
+      statesCovered: statesCovered || 15,
       lastUpdated: new Date().toISOString(),
       source: 'live',
     });
@@ -126,8 +128,7 @@ router.get('/stats', async (req, res) => {
     res.json({
       casesReceived: 501,
       activePilots: 25,
-      recoveryRate: '85%',
-      avgResponseTime: '48hrs',
+      statesCovered: 15,
       source: 'fallback',
     });
   }

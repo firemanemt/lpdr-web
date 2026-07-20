@@ -94,8 +94,8 @@ export default function LandingPage() {
   const stats = [
     { value: liveStats?.casesReceived || '501', label: 'Cases', icon: '📋', live: !!liveStats?.casesReceived },
     { value: liveStats?.activePilots || '25', label: 'Pilots', icon: '🛸' },
-    { value: liveStats?.recoveryRate || '85%', label: 'Recovery', icon: '✓' },
-    { value: liveStats?.avgResponseTime || '48hr', label: 'Avg Time', icon: '⏱' },
+    { value: liveStats?.statesCovered || '15', label: 'States', icon: '🇺🇸' },
+    { value: '24/7', label: 'Available', icon: '⚡' },
   ];
 
   const steps = [
