@@ -47,7 +47,10 @@ function LandingMap({ pilots }) {
           <Marker key={pilot.id} position={[parseFloat(pilot.lat), parseFloat(pilot.lng)]} icon={miniPilotIcon}>
             <Popup maxWidth={220} minWidth={180}>
               <div style={{ fontFamily: "'Cabin Condensed', sans-serif", padding: '0.15rem' }}>
-                <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#111827', marginBottom: '0.2rem' }}>🐾 {pilot.name}</div>
+                <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#111827', marginBottom: '0.2rem' }}>🐾 {pilot.businessName || pilot.name}</div>
+                {(pilot.businessName && pilot.name !== pilot.businessName) && (
+                  <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>{pilot.name}</div>
+                )}
                 {pilot.city && pilot.state && (
                   <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>{pilot.city}, {pilot.state}</div>
                 )}

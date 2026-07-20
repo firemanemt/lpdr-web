@@ -70,10 +70,32 @@ router.get('/live-cases/:wpId/contact', authenticate, requireRole('drone_pilot')
 });
 
 // GET /api/content/wp-pilots — Get real pilots from the website map
+// PUBLIC — strips phone, cert number, and other sensitive fields
 router.get('/wp-pilots', async (req, res) => {
   try {
     const pilots = await getWPPilots();
-    res.json({ pilots, total: pilots.length, source: 'lostpetdronerecovery.com' });
+    // Strip sensitive fields from public response
+    const publicPilots = pilots.map(p => ({
+      id: p.id,
+      name: p.name,
+      firstName: p.firstName,
+      lastName: p.lastName,
+      businessName: p.businessName,
+      email: p.email,
+      address: p.address,
+      city: p.city,
+      state: p.state,
+      country: p.country,
+      lat: p.lat,
+      lng: p.lng,
+      droneModel: p.droneModel,
+      capabilities: p.capabilities,
+      description: p.description,
+      userRole: p.userRole,
+      profileImageUrl: p.profileImageUrl,
+      source: p.source,
+    }));
+    res.json({ pilots: publicPilots, total: publicPilots.length, source: 'lostpetdronerecovery.com' });
   } catch (err) {
     res.json({ pilots: [], total: 0 });
   }

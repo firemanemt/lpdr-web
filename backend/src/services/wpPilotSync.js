@@ -1,7 +1,7 @@
 /**
  * WordPress Pilot Sync Service
  * Pulls real pilot data from the LPDR website's Google Map plugin
- * Geocodes addresses and maintains a pilot directory
+ * The "Find a Drone Pilot" page embeds base64-encoded map data via WPGMP
  */
 
 const WP_BASE = 'https://lostpetdronerecovery.com';
@@ -38,45 +38,95 @@ export async function getWPPilots() {
     const mapData = JSON.parse(decoded);
     const places = mapData.places || [];
 
-    // Parse pilot data from places
+    // Parse pilot data from places — the WPGMP data has rich extra_fields
     const pilots = places.map(place => {
       const loc = place.location || {};
       const content = place.content || '';
-      
-      // Extract email from content
-      const emailMatch = content.match(/[\w.+-]+@[\w-]+\.[\w.]+/);
-      const email = emailMatch ? emailMatch[0] : '';
-      
-      // Clean up name - remove email addresses and titles
-      let name = place.title || 'Unknown';
-      if (name.includes('@')) {
-        name = name.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-      }
-      name = name.replace(/\s*[-–]\s*(Owner|Founder|Admin|LPDR).*$/i, '').trim();
+      const ef = loc.extra_fields || {};
 
-      // Extract city/state from address
-      const address = place.address || '';
-      const cityStateMatch = address.match(/,\s*([A-Za-z\s]+),\s*([A-Z]{2})/);
-      const city = cityStateMatch ? cityStateMatch[1].trim() : '';
-      const state = cityStateMatch ? cityStateMatch[2] : '';
+      // Extract email from content (HTML) as fallback
+      const emailMatch = content.match(/[\w.+-]+@[\w-]+\.[\w.]+/);
+      const email = ef.user_email || (emailMatch ? emailMatch[0] : '');
+
+      // Use real name from extra_fields, fallback to title
+      const firstName = ef.first_name || '';
+      const lastName = ef.last_name || '';
+      let name = '';
+      if (firstName && lastName) {
+        name = `${firstName} ${lastName}`;
+      } else if (firstName) {
+        name = firstName;
+      } else {
+        name = place.title || 'Unknown';
+        // Clean up username-style names
+        if (name.includes('@')) {
+          name = name.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        }
+      }
+
+      // Business name
+      const businessName = ef.user_registration_input_box_1754579014 || '';
+
+      // Phone (only expose to verified pilots via separate endpoint)
+      const phone = ef.user_registration_phone_1754579074 || '';
+
+      // Drone info
+      const droneModel = ef.user_registration_drone_in_service || '';
+
+      // Capabilities
+      const capabilities = ef.user_registration_capabilities || '';
+
+      // Description
+      const description = ef.user_registration_textarea_1754579364 || '';
+
+      // FAA cert number (sensitive — only for admin)
+      const certNumber = ef.user_registration_certificate_number || '';
+
+      // Membership plan
+      const userRole = ef.user_role || '';
+
+      // Gravatar / profile image
+      const markerImageHtml = loc.marker_image || '';
+      const imgSrcMatch = markerImageHtml.match(/src=([^\s>]+)/);
+      const profileImageUrl = imgSrcMatch ? imgSrcMatch[1] : '';
+
+      // Map pin icon
+      const mapIcon = loc.icon || '';
+
+      // City/state from location object (more reliable than parsing address)
+      const city = loc.city || '';
+      const state = loc.state || '';
+      const country = loc.country || '';
 
       return {
         id: `wp-pilot-${place.id}`,
         wp_map_id: place.id,
         name,
+        firstName,
+        lastName,
+        businessName,
         email,
-        address,
+        phone,
+        address: place.address || '',
         city,
         state,
-        lat: loc.latitude ? parseFloat(loc.latitude) : null,
-        lng: loc.longitude ? parseFloat(loc.longitude) : null,
+        country,
+        lat: loc.lat ? parseFloat(loc.lat) : null,
+        lng: loc.lng ? parseFloat(loc.lng) : null,
+        droneModel,
+        capabilities,
+        description,
+        certNumber,
+        userRole,
+        profileImageUrl,
+        mapIcon,
         source: 'website',
         updated_at: new Date().toISOString(),
       };
     });
 
     cache = { data: pilots, timestamp: Date.now() };
-    console.log(`✅ Synced ${pilots.length} real pilots from website`);
+    console.log(`✅ Synced ${pilots.length} real pilots from website (${pilots.filter(p => p.lat && p.lng).length} with coordinates)`);
     return pilots;
   } catch (err) {
     console.warn('WP pilot sync failed:', err.message);

@@ -93,6 +93,7 @@ export default function PilotMapPage() {
   const allPilots = wpPilots.map(p => ({
     id: p.id,
     name: p.name,
+    businessName: p.businessName || '',
     lat: p.lat,
     lng: p.lng,
     city: p.city && p.state ? `${p.city}, ${p.state}` : (p.address || '').split(',').slice(-3).join(',').trim(),
@@ -100,10 +101,13 @@ export default function PilotMapPage() {
     rating: null,
     thermal: true,
     price: null,
-    bio: p.email ? `Contact: ${p.email}` : '',
+    bio: p.description || '',
+    droneModel: p.droneModel || '',
+    capabilities: p.capabilities || '',
     verified: true,
     source: 'website',
     email: p.email,
+    profileImageUrl: p.profileImageUrl || '',
   })).filter(p => p.lat && p.lng);
 
   const filteredPilots = allPilots.filter(p => {
@@ -190,12 +194,15 @@ export default function PilotMapPage() {
               <div style={{ fontFamily: "'Cabin Condensed', sans-serif", padding: '0.25rem' }}>
                 <div style={{ textAlign: 'center', marginBottom: '0.75rem' }}>
                   <div style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>🐾</div>
-                  <div style={{ fontWeight: 700, fontSize: '1.05rem', color: '#111827' }}>{pilot.name}</div>
+                  {pilot.businessName && (
+                    <div style={{ fontWeight: 700, fontSize: '1.05rem', color: '#111827' }}>{pilot.businessName}</div>
+                  )}
+                  <div style={{ fontWeight: 600, fontSize: pilot.businessName ? '0.85rem' : '1.05rem', color: pilot.businessName ? '#6b7280' : '#111827' }}>{pilot.name}</div>
                   <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
                     <FiMapPin size={12} style={{ verticalAlign: 'middle' }} /> {pilot.city}
                   </div>
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.7rem', color: '#fa9118', fontWeight: 700, marginTop: '0.15rem', background: '#fff7ed', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
-                    <FiGlobe size={10} /> From lostpetdronerecovery.com
+                    <FiGlobe size={10} /> lostpetdronerecovery.com
                   </div>
                 </div>
 
@@ -205,8 +212,11 @@ export default function PilotMapPage() {
                   </p>
                 )}
 
-                <div style={{ textAlign: 'center', marginBottom: '0.75rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
                   <span style={{ background: '#fef3c7', color: '#92400e', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700 }}>🔥 THERMAL</span>
+                  {pilot.droneModel && (
+                    <span style={{ background: '#dbeafe', color: '#1e40af', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700 }}>🛸 {pilot.droneModel}</span>
+                  )}
                 </div>
 
                 {isAuthenticated ? (
@@ -255,7 +265,7 @@ export default function PilotMapPage() {
               fontFamily: 'var(--font-body)', fontSize: '0.8rem',
             }}>
               <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#fa9118', boxShadow: '0 0 6px rgba(250,145,24,0.4)' }} />
-              <span style={{ fontWeight: 600 }}>{pilot.name}</span>
+              <span style={{ fontWeight: 600 }}>{pilot.businessName || pilot.name}</span>
               {pilot.city && <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', fontFamily: 'var(--font-mono)' }}>{pilot.city.split(',')[0]}</span>}
             </button>
           ))}
