@@ -7,6 +7,7 @@ import rateLimit from 'express-rate-limit';
 import config from './config/index.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { initDatabase } from './config/database.js';
+import { initStorage } from './services/storage.js';
 
 // Import routes
 import authRoutes from './routes/auth.js';
@@ -69,6 +70,8 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
     version: '1.0.0',
     mode: config.nodeEnv,
+    database: !!config.database.url,
+    smtp: !!(config.smtp?.host && config.smtp?.user),
   });
 });
 
@@ -130,19 +133,27 @@ app.use(errorHandler);
 
 // Start server
 async function start() {
-  // Try to initialize database (non-fatal if not available)
+  // Initialize storage (PostgreSQL if DATABASE_URL, else in-memory)
   try {
-    await initDatabase();
+    const storage = await initStorage();
+    // If we got DB storage, also initialize the schema
+    if (config.database.url) {
+      await initDatabase();
+    }
   } catch (err) {
-    console.log('⚠️ Running in demo mode (no database connection)');
+    console.warn('⚠️ Storage init failed, running in demo mode:', err.message);
   }
 
   httpServer.listen(config.port, () => {
+    const dbStatus = config.database.url ? 'PostgreSQL' : 'In-Memory (demo)';
+    const smtpStatus = (config.smtp?.host && config.smtp?.user) ? 'Configured' : 'Not configured (console only)';
     console.log(`
 ╔══════════════════════════════════════════════════╗
 ║     LPDR Backend API Server                      ║
 ║     Running on http://localhost:${config.port}       ║
-║     Mode: ${config.nodeEnv.padEnd(29)}║
+║     Mode: ${config.nodeEnv.padEnd(37)}║
+║     Database: ${dbStatus.padEnd(33)}║
+║     SMTP: ${smtpStatus.padEnd(38)}║
 ║     WebSocket: Active                            ║
 ╚══════════════════════════════════════════════════╝
     `);

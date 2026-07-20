@@ -32,12 +32,14 @@ export const config = {
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
   },
   
-  // Railway sets PORT automatically. Frontend is self-hosted in production.
-  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
-  // In production, also allow requests from the Railway domain
-  corsOrigin: process.env.CORS_ORIGIN || process.env.FRONTEND_URL || 'http://localhost:5173',
-  // Railway public domain (set by Railway)
-  railwayUrl: process.env.RAILWAY_PUBLIC_DOMAIN || '',
+  // The public URL where users access the app (for email links, CORS, etc.)
+  // Railway sets RAILWAY_PUBLIC_DOMAIN automatically; APP_URL can override
+  appUrl: process.env.APP_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'http://localhost:5173'),
+  
+  // Legacy compat
+  frontendUrl: process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:5173',
+  corsOrigin: process.env.CORS_ORIGIN || process.env.APP_URL || 'http://localhost:5173',
+  railwayUrl: process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : '',
   
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME,

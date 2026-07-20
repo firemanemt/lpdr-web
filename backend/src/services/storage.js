@@ -4,7 +4,7 @@ import config from '../config/index.js';
 
 /**
  * In-memory storage for demo/development mode
- * Will be replaced by PostgreSQL in production
+ * When DATABASE_URL is set, the app uses DatabaseStorage instead
  */
 class InMemoryStorage {
   constructor() {
@@ -145,7 +145,7 @@ class InMemoryStorage {
         base_lng: p.lng,
         service_radius: p.radius,
         available: true,
-        verified: !!p.faaCert, // Only verified if they have FAA cert
+        verified: !!p.faaCert,
         faa_cert_number: p.faaCert,
         insurance_provider: p.insurance,
         insurance_policy_number: p.policy,
@@ -164,7 +164,6 @@ class InMemoryStorage {
         updated_at: now,
       });
 
-      // Equipment
       this.pilotEquipment.push({
         id: uuidv4(),
         pilot_id: pid,
@@ -176,7 +175,6 @@ class InMemoryStorage {
         notes: null,
       });
 
-      // Pricing
       this.pilotPricing.push({
         id: uuidv4(),
         pilot_id: pid,
@@ -185,7 +183,6 @@ class InMemoryStorage {
         description: 'Per search (up to 2 hours)',
       });
 
-      // Add pilot to map
       this.pilotLocations.push({
         id: uuidv4(),
         pilot_id: pid,
@@ -246,24 +243,8 @@ class InMemoryStorage {
     this.reviews.push(
       { id: uuidv4(), case_id: uuidv4(), owner_id: ownerId, pilot_id: pilotIds[0], rating: 5, comment: 'Mike found our cat within 30 minutes. Absolutely incredible service!', created_at: new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000) },
       { id: uuidv4(), case_id: uuidv4(), owner_id: uuidv4(), pilot_id: pilotIds[2], rating: 5, comment: 'David was so professional and caring. He found our dog in the woods before nightfall.', created_at: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) },
-      { id: uuidv4(), case_id: uuidv4(), owner_id: uuidv4(), pilot_id: pilotIds[3], rating: 4, comment: 'Amanda was very helpful. She searched for hours and eventually found our cat.', created_at: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000) },
+      { id: uuidv4(), case_id: uuidv4(), owner_id: uuidv4(), pilot_id: pilotIds[0], rating: 4, comment: 'Great service, would recommend to anyone who loses a pet.', created_at: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000) },
     );
-
-    // Update pilot ratings based on reviews
-    this.updatePilotRating(pilotIds[0], 5);
-    this.updatePilotRating(pilotIds[2], 5);
-    this.updatePilotRating(pilotIds[3], 4);
-
-    console.log('✅ Demo data seeded');
-  }
-
-  updatePilotRating(pilotId, newRating) {
-    const profile = this.pilotProfiles.find(p => p.id === pilotId);
-    if (profile) {
-      const total = profile.total_reviews * profile.average_rating + newRating;
-      profile.total_reviews += 1;
-      profile.average_rating = Math.round((total / profile.total_reviews) * 10) / 10;
-    }
   }
 
   // === USER METHODS ===
@@ -276,9 +257,13 @@ class InMemoryStorage {
   }
 
   async createUser(userData) {
+    const id = uuidv4();
+    const hashedPassword = bcrypt.hashSync(userData.password, 10);
     const verificationToken = uuidv4();
+    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
     const user = {
-      id: uuidv4(),
+      id,
       wp_id: null,
       email: userData.email,
       first_name: userData.firstName,
@@ -288,15 +273,15 @@ class InMemoryStorage {
       avatar_url: null,
       email_verified: false,
       email_verification_token: verificationToken,
-      email_verification_expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      email_verification_expires: verificationExpires,
       password_reset_token: null,
       password_reset_expires: null,
       created_at: new Date(),
       updated_at: new Date(),
-      password: bcrypt.hashSync(userData.password, 10),
+      password: hashedPassword,
+      _verificationToken: verificationToken,
     };
     this.users.push(user);
-    user._verificationToken = verificationToken; // For email sending
     return user;
   }
 
@@ -324,15 +309,16 @@ class InMemoryStorage {
     return this.users.find(u => 
       u.email_verification_token === token && 
       u.email_verification_expires > new Date()
-    ) || null;
+    );
   }
 
   async setPasswordResetToken(email) {
     const user = this.users.find(u => u.email === email);
     if (!user) return null;
     const token = uuidv4();
+    const expires = new Date(Date.now() + 60 * 60 * 1000);
     user.password_reset_token = token;
-    user.password_reset_expires = new Date(Date.now() + 60 * 60 * 1000);
+    user.password_reset_expires = expires;
     user.updated_at = new Date();
     user._resetToken = token;
     return user;
@@ -364,11 +350,10 @@ class InMemoryStorage {
 
   async getAvailablePilots(lat, lng, radius) {
     return this.pilotProfiles
+      .filter(p => p.available && p.verified)
       .filter(p => {
-        if (!p.available || !p.verified) return false;
-        if (lat && lng && radius) {
-          const dist = this.haversineDistance(lat, lng, parseFloat(p.base_lat), parseFloat(p.base_lng));
-          return dist <= radius;
+        if (lat && lng && radius && p.base_lat && p.base_lng) {
+          return this.haversineDistance(lat, lng, parseFloat(p.base_lat), parseFloat(p.base_lng)) <= radius;
         }
         return true;
       })
@@ -376,8 +361,14 @@ class InMemoryStorage {
         const user = this.users.find(u => u.id === p.id);
         const equipment = this.pilotEquipment.filter(e => e.pilot_id === p.id);
         const pricing = this.pilotPricing.filter(pr => pr.pilot_id === p.id);
-        const loc = this.pilotLocations.find(l => l.pilot_id === p.id);
-        return { ...user, profile: p, equipment, pricing, location: loc };
+        const location = this.pilotLocations.find(l => l.pilot_id === p.id);
+        return {
+          ...user,
+          profile: p,
+          equipment,
+          pricing,
+          location,
+        };
       });
   }
 
@@ -385,8 +376,8 @@ class InMemoryStorage {
     const profile = {
       id,
       bio: data.bio || null,
-      base_lat: data.baseLat,
-      base_lng: data.baseLng,
+      base_lat: data.baseLat || null,
+      base_lng: data.baseLng || null,
       service_radius: data.serviceRadius || 25,
       available: false,
       verified: false,
@@ -511,7 +502,6 @@ class InMemoryStorage {
     };
     this.cases.push(caseItem);
 
-    // Add timeline entry
     this.caseTimeline.push({
       id: uuidv4(),
       case_id: caseItem.id,
@@ -695,7 +685,7 @@ class InMemoryStorage {
 
   // === UTILITY ===
   haversineDistance(lat1, lon1, lat2, lon2) {
-    const R = 3959; // miles
+    const R = 3959;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -708,37 +698,79 @@ class InMemoryStorage {
 
 
 // ============================
-// STORAGE FACTORY
+// STORAGE SINGLETON
 // Auto-detects PostgreSQL vs in-memory
 // ============================
 
 let storageInstance = null;
+let storageInitPromise = null;
 
-export async function getStorage() {
+/**
+ * Initialize the storage singleton.
+ * If DATABASE_URL is set and PostgreSQL connects, uses DatabaseStorage.
+ * Otherwise falls back to InMemoryStorage with demo data.
+ * Called once at server startup.
+ */
+export async function initStorage() {
   if (storageInstance) return storageInstance;
 
-  const dbUrl = config.database.url;
-  
-  if (dbUrl) {
-    try {
-      // Test the connection
-      const { default: DatabaseStorage } = await import('./dbStorage.js');
-      storageInstance = new DatabaseStorage();
-      // Quick connection test
-      await storageInstance.pool.query('SELECT 1');
-      console.log('✅ PostgreSQL storage active');
-      return storageInstance;
-    } catch (err) {
-      console.warn('⚠️ PostgreSQL connection failed, falling back to in-memory:', err.message);
-    }
-  }
+  // Prevent double-init
+  if (storageInitPromise) return storageInitPromise;
 
-  // Fall back to in-memory
-  storageInstance = new InMemoryStorage();
+  storageInitPromise = (async () => {
+    const dbUrl = config.database.url;
+    
+    if (dbUrl) {
+      try {
+        const { default: DatabaseStorage } = await import('./dbStorage.js');
+        const dbStorage = new DatabaseStorage();
+        // Quick connection test
+        await dbStorage.pool.query('SELECT 1');
+        console.log('✅ PostgreSQL storage active');
+        storageInstance = dbStorage;
+        return storageInstance;
+      } catch (err) {
+        console.warn('⚠️ PostgreSQL connection failed, falling back to in-memory:', err.message);
+      }
+    }
+
+    // Fall back to in-memory
+    storageInstance = new InMemoryStorage();
+    console.log('📦 In-memory storage active (demo mode — data resets on restart)');
+    return storageInstance;
+  })();
+
+  return storageInitPromise;
+}
+
+/**
+ * Get the current storage instance.
+ * Must call initStorage() first (at server startup).
+ */
+export function getStorage() {
+  if (!storageInstance) {
+    // If someone calls getStorage() before init, return in-memory as fallback
+    storageInstance = new InMemoryStorage();
+    console.log('📦 Storage accessed before init — using in-memory fallback');
+  }
   return storageInstance;
 }
 
-// Default export for backwards compatibility (synchronous access)
-// This creates in-memory immediately; call getStorage() for async DB init
-const syncStorage = new InMemoryStorage();
-export default syncStorage;
+// Default export: the current storage instance
+// After initStorage() is called, this will be either DB or in-memory
+// Before initStorage(), it's a temporary in-memory instance (routes that import at module level)
+let _defaultStorage = new InMemoryStorage();
+
+// Proxy that always delegates to the current singleton
+const storageProxy = new Proxy(_defaultStorage, {
+  get(target, prop, receiver) {
+    const actual = storageInstance || _defaultStorage;
+    const value = actual[prop];
+    if (typeof value === 'function') {
+      return value.bind(actual);
+    }
+    return value;
+  },
+});
+
+export default storageProxy;

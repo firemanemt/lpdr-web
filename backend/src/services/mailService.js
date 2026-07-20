@@ -31,7 +31,7 @@ function getTransporter() {
 }
 
 export async function sendVerificationEmail(email, firstName, verificationToken) {
-  const baseUrl = config.frontendUrl || config.railwayUrl || 'http://localhost:5173';
+  const baseUrl = config.appUrl || config.frontendUrl || config.railwayUrl || 'http://localhost:5173';
   const verifyUrl = `${baseUrl}/verify-email?token=${verificationToken}`;
 
   const subject = 'LPDR — Verify Your Email Address';
@@ -59,7 +59,7 @@ export async function sendVerificationEmail(email, firstName, verificationToken)
 }
 
 export async function sendPasswordResetEmail(email, firstName, resetToken) {
-  const baseUrl = config.frontendUrl || config.railwayUrl || 'http://localhost:5173';
+  const baseUrl = config.appUrl || config.frontendUrl || config.railwayUrl || 'http://localhost:5173';
   const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
 
   const subject = 'LPDR — Reset Your Password';
