@@ -66,20 +66,13 @@ app.use('/api/admin', adminRoutes);
 // Health check
 app.get('/api/health', (req, res) => {
   const dbUrl = config.database.url;
-  // Show ALL env vars (mask sensitive ones)
-  const envVars = {};
-  for (const [key, value] of Object.entries(process.env)) {
-    if (value && value.length > 50) {
-      envVars[key] = value.substring(0, 30) + '...';
-    } else {
-      envVars[key] = value || '';
-    }
-  }
   res.json({ 
     status: 'ok', 
+    timestamp: new Date().toISOString(),
+    version: '1.0.0',
+    mode: config.nodeEnv,
     database: !!dbUrl,
     smtp: !!(config.smtp?.host && config.smtp?.user),
-    envVars,
   });
 });
 
