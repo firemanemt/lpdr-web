@@ -45,7 +45,7 @@ class DatabaseStorage {
   }
 
   async updateUser(id, updates) {
-    const allowedFields = ['first_name', 'last_name', 'phone', 'avatar_url', 'email_verified', 'email_verification_token', 'email_verification_expires', 'password_reset_token', 'password_reset_expires'];
+    const allowedFields = ['first_name', 'last_name', 'phone', 'avatar_url', 'email_verified', 'email_verification_token', 'email_verification_expires', 'password_reset_token', 'password_reset_expires', 'password'];
     const setClauses = [];
     const values = [];
     let paramIndex = 1;

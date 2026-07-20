@@ -145,6 +145,27 @@ async function start() {
     console.warn('⚠️ Storage init failed, running in demo mode:', err.message);
   }
 
+  // Seed admin account if it doesn't exist
+  try {
+    const storage = (await import('./services/storage.js')).default;
+    const adminEmail = 'admin@lostpetdronerecovery.com';
+    const existing = await storage.findUserByEmail(adminEmail);
+    if (!existing) {
+      const admin = await storage.createUser({
+        email: adminEmail,
+        password: 'LPDRadmin2024!',
+        firstName: 'Admin',
+        lastName: 'LPDR',
+        phone: null,
+        role: 'admin',
+      });
+      await storage.updateUser(admin.id, { email_verified: true });
+      console.log('👑 Admin account seeded:', adminEmail);
+    }
+  } catch (err) {
+    console.warn('⚠️ Admin seed failed:', err.message);
+  }
+
   httpServer.listen(config.port, () => {
     const dbStatus = config.database.url ? 'PostgreSQL' : 'In-Memory (demo)';
     const smtpStatus = (config.smtp?.host && config.smtp?.user) ? 'Configured' : 'Not configured (console only)';
