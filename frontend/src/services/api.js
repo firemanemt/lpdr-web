@@ -87,6 +87,7 @@ export const contentApi = {
   getTestimonials: () => api.get('/content/testimonials'),
   getFaqs: () => api.get('/content/faqs'),
   getCaseContact: (wpId) => api.get(`/content/live-cases/${wpId}/contact`),
+  getWPPilots: () => api.get('/content/wp-pilots'),
 };
 
 // ============ Notifications ============

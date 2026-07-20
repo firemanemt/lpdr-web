@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import storage from '../services/storage.js';
 import { getWPCases, getWPCasesFull, getWPCaseFull, getWPTestimonials, getWPFAQs, getWPTotalCaseCount } from '../services/wpSync.js';
+import { getWPPilots } from '../services/wpPilotSync.js';
 
 const router = Router();
 
@@ -68,20 +69,32 @@ router.get('/live-cases/:wpId/contact', authenticate, requireRole('drone_pilot')
   }
 });
 
+// GET /api/content/wp-pilots — Get real pilots from the website map
+router.get('/wp-pilots', async (req, res) => {
+  try {
+    const pilots = await getWPPilots();
+    res.json({ pilots, total: pilots.length, source: 'lostpetdronerecovery.com' });
+  } catch (err) {
+    res.json({ pilots: [], total: 0 });
+  }
+});
+
 // GET /api/content/stats — Get real stats from WordPress
 router.get('/stats', async (req, res) => {
   try {
-    const [cases, totalCaseCount] = await Promise.all([
+    const [cases, totalCaseCount, wpPilots] = await Promise.all([
       getWPCases(),
       getWPTotalCaseCount(),
+      getWPPilots(),
     ]);
 
-    // Use real WP total if available, otherwise fall back to cases array length
+    // Use real WP total if available, otherwise fall back
     const casesReceived = totalCaseCount || Math.max(cases.length, 130);
+    const activePilots = wpPilots.length || 50;
 
     res.json({
       casesReceived,
-      activePilots: 50,
+      activePilots,
       recoveryRate: '85%',
       avgResponseTime: '48hrs',
       lastUpdated: new Date().toISOString(),
@@ -90,7 +103,7 @@ router.get('/stats', async (req, res) => {
   } catch (err) {
     res.json({
       casesReceived: 501,
-      activePilots: 50,
+      activePilots: 25,
       recoveryRate: '85%',
       avgResponseTime: '48hrs',
       source: 'fallback',

@@ -3,6 +3,7 @@ import { authenticate, requireRole } from '../middleware/auth.js';
 import { validate, createCaseSchema } from '../middleware/validation.js';
 import { AppError } from '../middleware/errorHandler.js';
 import storage from '../services/storage.js';
+import { notifyNearbyPilots, notifyOwnerPilotAssigned, notifyOwnerSearchStarted, notifyOwnerPetFound } from '../services/notificationService.js';
 
 const router = Router();
 
@@ -21,11 +22,15 @@ router.post('/', authenticate, requireRole('pet_owner'), validate(createCaseSche
     await storage.addTimelineEntry(newCase.id, 'notifying', 'Notifying nearby pilots...', null);
 
     // In production: trigger push notifications to nearby pilots
-    // For demo: automatically match with first available pilot
     const nearbyPilots = await storage.getAvailablePilots(
       caseData.lastSeenLat,
       caseData.lastSeenLng,
       caseData.searchRadius || 25
+    );
+
+    // Send notifications to nearby pilots
+    notifyNearbyPilots(newCase, nearbyPilots).catch(err => 
+      console.warn('Notification error:', err.message)
     );
 
     res.status(201).json({
@@ -107,6 +112,11 @@ router.post('/:id/accept', authenticate, requireRole('drone_pilot'), async (req,
     await storage.updateCase(caseItem.id, { pilot_id: req.userId, status: 'matched' });
     await storage.addTimelineEntry(caseItem.id, 'matched', `Pilot accepted the case`, req.userId);
 
+    // Notify the pet owner
+    notifyOwnerPilotAssigned(caseItem.owner_id, `${req.user.first_name} ${req.user.last_name}`, caseItem.pet_name).catch(err =>
+      console.warn('Notification error:', err.message)
+    );
+
     res.json({ message: 'Case accepted!', status: 'matched' });
   } catch (err) {
     next(err);
@@ -138,6 +148,17 @@ router.post('/:id/status', authenticate, async (req, res, next) => {
 
     await storage.updateCase(caseItem.id, updates);
     await storage.addTimelineEntry(caseItem.id, status, notes || `Case status updated to ${status}`, req.userId);
+
+    // Send notifications for key status changes
+    if (status === 'searching') {
+      notifyOwnerSearchStarted(caseItem.owner_id, caseItem.pet_name).catch(err =>
+        console.warn('Notification error:', err.message)
+      );
+    } else if (status === 'found') {
+      notifyOwnerPetFound(caseItem.owner_id, caseItem.pet_name).catch(err =>
+        console.warn('Notification error:', err.message)
+      );
+    }
 
     res.json({ message: `Case status updated to ${status}`, status });
   } catch (err) {

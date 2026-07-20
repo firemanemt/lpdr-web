@@ -23,6 +23,7 @@ import VerifyEmailPage from './pages/VerifyEmailPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import PilotVerificationPage from './pages/PilotVerificationPage';
+import AdminDashboard from './pages/AdminDashboard';
 import NotFoundPage from './pages/NotFoundPage';
 
 export default function App() {
@@ -92,6 +93,13 @@ export default function App() {
             <Route path="/pilot/verification" element={
               <ProtectedRoute requiredRole="drone_pilot">
                 <PilotVerificationPage />
+              </ProtectedRoute>
+            } />
+
+            {/* Admin Routes */}
+            <Route path="/admin" element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminDashboard />
               </ProtectedRoute>
             } />
 
