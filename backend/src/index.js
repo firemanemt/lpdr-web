@@ -65,13 +65,16 @@ app.use('/api/admin', adminRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
+  const dbUrl = config.database.url;
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
     version: '1.0.0',
     mode: config.nodeEnv,
-    database: !!config.database.url,
+    database: !!dbUrl,
     smtp: !!(config.smtp?.host && config.smtp?.user),
+    // Debug: show what DATABASE_URL looks like (mask the password)
+    databaseUrlPreview: dbUrl ? dbUrl.substring(0, 30) + '...' : 'NOT SET',
   });
 });
 
