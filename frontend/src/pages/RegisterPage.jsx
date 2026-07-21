@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
-import { FiUser, FiMail, FiLock, FiPhone, FiCheck, FiShield } from 'react-icons/fi';
+import { FiUser, FiMail, FiLock, FiPhone, FiCheck, FiShield, FiEye, FiEyeOff } from 'react-icons/fi';
 
 export default function RegisterPage() {
   const [searchParams] = useSearchParams();
@@ -23,6 +23,7 @@ export default function RegisterPage() {
     insurancePolicyNumber: '',
   });
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -143,12 +144,37 @@ export default function RegisterPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 <div className="form-group">
                   <label className="form-label"><FiLock size={11} style={{ verticalAlign: 'middle', marginRight: '0.3rem' }} />Password *</label>
-                  <input type="password" className={`form-input ${errors.password ? 'error' : ''}`} value={form.password} onChange={(e) => updateField('password', e.target.value)} placeholder="Min 6 chars" />
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      className={`form-input ${errors.password ? 'error' : ''}`}
+                      value={form.password}
+                      onChange={(e) => updateField('password', e.target.value)}
+                      placeholder="Min 6 chars"
+                      style={{ paddingRight: '2.5rem' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      style={{
+                        position: 'absolute', right: '0.6rem', top: '50%', transform: 'translateY(-50%)',
+                        background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0.2rem', display: 'flex', alignItems: 'center',
+                      }}
+                    >
+                      {showPassword ? <FiEyeOff size={16} /> : <FiEye size={16} />}
+                    </button>
+                  </div>
                   {errors.password && <div className="form-error">{errors.password}</div>}
                 </div>
                 <div className="form-group">
                   <label className="form-label">Confirm *</label>
-                  <input type="password" className={`form-input ${errors.confirmPassword ? 'error' : ''}`} value={form.confirmPassword} onChange={(e) => updateField('confirmPassword', e.target.value)} placeholder="Confirm" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    className={`form-input ${errors.confirmPassword ? 'error' : ''}`}
+                    value={form.confirmPassword}
+                    onChange={(e) => updateField('confirmPassword', e.target.value)}
+                    placeholder="Confirm"
+                  />
                   {errors.confirmPassword && <div className="form-error">{errors.confirmPassword}</div>}
                 </div>
               </div>
