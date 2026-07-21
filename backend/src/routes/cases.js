@@ -29,7 +29,7 @@ router.post('/', authenticate, requireRole('pet_owner'), validate(createCaseSche
     await storage.updateCase(newCase.id, { status: 'notifying' });
     await storage.addTimelineEntry(newCase.id, 'notifying', 'Notifying nearby pilots...', null);
 
-    // Notify nearby pilots
+    // Notify nearby pilots via email + push
     const nearbyPilots = await storage.getAvailablePilots(
       caseData.lastSeenLat,
       caseData.lastSeenLng,
@@ -39,6 +39,21 @@ router.post('/', authenticate, requireRole('pet_owner'), validate(createCaseSche
     notifyNearbyPilots(newCase, nearbyPilots).catch(err => 
       console.warn('Notification error:', err.message)
     );
+
+    // Also push-notify ALL verified pilots (even offline/unavailable ones)
+    // This ensures pilots get the notification even when the app is closed
+    try {
+      const { sendPushToRole } = await import('../services/pushService.js');
+      sendPushToRole('drone_pilot', {
+        title: `🐾 New Lost Pet: ${newCase.pet_name}`,
+        body: `${newCase.pet_type} — ${newCase.last_seen_address || 'see details'}`,
+        tag: 'new-case',
+        data: { url: '/pilot/dashboard', type: 'new_case' },
+        requireInteraction: true,
+      }).catch(err => console.warn('Push to pilots error:', err.message));
+    } catch (err) {
+      console.warn('Push import error:', err.message);
+    }
 
     // Load photos for response
     const casePhotos = await storage.getCasePhotos(newCase.id);

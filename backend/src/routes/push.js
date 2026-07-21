@@ -26,6 +26,23 @@ router.get('/status', authenticate, async (req, res) => {
   }
 });
 
+// POST /api/push/test — Send a test push notification to yourself
+router.post('/test', authenticate, async (req, res) => {
+  try {
+    const { sendPushToUser } = await import('../services/pushService.js');
+    await sendPushToUser(req.user.id, {
+      title: '🧪 LPDR Test Notification',
+      body: 'If you see this, push notifications are working!',
+      tag: 'test',
+      data: { url: '/pilot/dashboard', type: 'test' },
+      requireInteraction: true,
+    });
+    res.json({ success: true, message: 'Test push sent' });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
 // POST /api/push/subscribe — Register a push subscription
 router.post('/subscribe', authenticate, async (req, res, next) => {
   try {
