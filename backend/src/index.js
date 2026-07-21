@@ -127,6 +127,16 @@ app.get('/api/health', async (req, res) => {
     dbError,
     directTest,
     discoveredHost,
+    railwayEnv: {
+      SERVICE_ID: process.env.RAILWAY_SERVICE_ID,
+      SERVICE_NAME: process.env.RAILWAY_SERVICE_NAME,
+      PRIVATE_DOMAIN: process.env.RAILWAY_PRIVATE_DOMAIN,
+      PUBLIC_DOMAIN: process.env.RAILWAY_PUBLIC_DOMAIN,
+      ENVIRONMENT_ID: process.env.RAILWAY_ENVIRONMENT_ID,
+      PROJECT_ID: process.env.RAILWAY_PROJECT_ID,
+      DB_PUBLIC_URL: process.env.DATABASE_PUBLIC_URL ? process.env.DATABASE_PUBLIC_URL.substring(0, 50) + '...' : null,
+      ALL_DB_VARS: Object.keys(process.env).filter(k => k.toLowerCase().includes('database') || k.toLowerCase().includes('postgres') || k.toLowerCase().includes('pg') || k.toLowerCase().includes('db')).sort(),
+    },
     smtp: !!(config.smtp?.host && config.smtp?.user),
   });
 });
