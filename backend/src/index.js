@@ -212,11 +212,24 @@ async function start() {
 
         console.log(`✅ Seeded account: ${account.email} (${account.role})`);
       } else if (account.role === 'drone_pilot') {
-        // If account exists but isn't verified yet, approve it
+        // Account exists — make sure pilot profile and verification are intact
         const profile = await storage.getPilotProfile(existing.id);
-        if (profile?.profile && !profile.profile.verified && profile.profile.verification_status !== 'approved') {
+        if (!profile?.profile) {
+          // Pilot profile missing — recreate it
+          await storage.createPilotProfile(existing.id, {
+            baseLat: 42.4245559,
+            baseLng: -74.981858,
+            serviceRadius: 50,
+            faaCertNumber: 'FAA-107-LPDR',
+            insuranceProvider: null,
+            insurancePolicyNumber: null,
+          });
           await storage.reviewPilotVerification(existing.id, 'approved', 'Site owner');
-          console.log(`✅ Auto-approved verification: ${account.email}`);
+          console.log(`✅ Re-seeded pilot profile: ${account.email}`);
+        } else if (!profile.profile.verified) {
+          // Profile exists but not verified — approve it
+          await storage.reviewPilotVerification(existing.id, 'approved', 'Site owner');
+          console.log(`✅ Re-approved verification: ${account.email}`);
         }
       }
     }

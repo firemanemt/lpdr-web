@@ -58,32 +58,22 @@ router.get('/', authenticate, async (req, res, next) => {
   try {
     const cases = await storage.getCasesForUser(req.userId, req.user.role);
     
-    // For pilots, also include unassigned cases near them
+    // For pilots, also include unassigned cases
     if (req.user.role === 'drone_pilot') {
       const profile = await storage.getPilotProfile(req.userId);
-      if (profile?.profile && profile.profile.available && profile.profile.verified) {
-        const pilotLat = parseFloat(profile.profile.base_lat);
-        const pilotLng = parseFloat(profile.profile.base_lng);
-        const pilotRadius = profile.profile.service_radius || 50;
+      if (profile?.profile) {
+        const allCases = await storage.getCasesForUser(req.userId, 'admin'); // Get all cases
+        const assignedIds = new Set(cases.map(c => c.id));
         
-        if (pilotLat && pilotLng) {
-          const allCases = await storage.getCasesForUser(req.userId, 'admin'); // Get all cases
-          const assignedIds = new Set(cases.map(c => c.id));
-          
-          // Filter to unassigned cases within pilot's service radius
-          const nearbyUnassigned = allCases.filter(c => {
-            if (assignedIds.has(c.id)) return false;
-            if (c.pilot_id) return false;
-            if (c.status !== 'notifying' && c.status !== 'submitted') return false;
-            if (!c.last_seen_lat || !c.last_seen_lng) return false;
-            
-            // Check distance
-            const dist = haversineDistance(pilotLat, pilotLng, parseFloat(c.last_seen_lat), parseFloat(c.last_seen_lng));
-            return dist <= pilotRadius;
-          });
-          
-          cases.push(...nearbyUnassigned);
-        }
+        // Include all unassigned notifying/submitted cases — let pilots decide how far to go
+        const nearbyUnassigned = allCases.filter(c => {
+          if (assignedIds.has(c.id)) return false;
+          if (c.pilot_id) return false;
+          if (c.status !== 'notifying' && c.status !== 'submitted') return false;
+          return true;
+        });
+        
+        cases.push(...nearbyUnassigned);
       }
     }
     
