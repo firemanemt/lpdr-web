@@ -46,9 +46,14 @@ export default function PilotDashboard() {
     const newState = !available;
     setAvailable(newState);
     try {
-      await pilotApi.toggleAvailability(newState);
+      const res = await pilotApi.toggleAvailability(newState);
+      // Confirm the server accepted it
+      if (res.data?.available !== undefined) {
+        setAvailable(res.data.available);
+      }
     } catch (err) {
-      setAvailable(!newState);
+      console.error('Failed to toggle availability:', err);
+      setAvailable(!newState); // Rollback
     }
   };
 
