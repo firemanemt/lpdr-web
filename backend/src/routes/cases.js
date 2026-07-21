@@ -53,10 +53,39 @@ router.post('/', authenticate, requireRole('pet_owner'), validate(createCaseSche
   }
 });
 
-// GET /api/cases — Get user's cases
+// GET /api/cases — Get user's cases + available cases for pilots
 router.get('/', authenticate, async (req, res, next) => {
   try {
     const cases = await storage.getCasesForUser(req.userId, req.user.role);
+    
+    // For pilots, also include unassigned cases near them
+    if (req.user.role === 'drone_pilot') {
+      const profile = await storage.getPilotProfile(req.userId);
+      if (profile?.profile && profile.profile.available && profile.profile.verified) {
+        const pilotLat = parseFloat(profile.profile.base_lat);
+        const pilotLng = parseFloat(profile.profile.base_lng);
+        const pilotRadius = profile.profile.service_radius || 50;
+        
+        if (pilotLat && pilotLng) {
+          const allCases = await storage.getCasesForUser(req.userId, 'admin'); // Get all cases
+          const assignedIds = new Set(cases.map(c => c.id));
+          
+          // Filter to unassigned cases within pilot's service radius
+          const nearbyUnassigned = allCases.filter(c => {
+            if (assignedIds.has(c.id)) return false;
+            if (c.pilot_id) return false;
+            if (c.status !== 'notifying' && c.status !== 'submitted') return false;
+            if (!c.last_seen_lat || !c.last_seen_lng) return false;
+            
+            // Check distance
+            const dist = haversineDistance(pilotLat, pilotLng, parseFloat(c.last_seen_lat), parseFloat(c.last_seen_lng));
+            return dist <= pilotRadius;
+          });
+          
+          cases.push(...nearbyUnassigned);
+        }
+      }
+    }
     
     const enriched = [];
     for (const c of cases) {
@@ -82,6 +111,18 @@ router.get('/', authenticate, async (req, res, next) => {
     next(err);
   }
 });
+
+// Haversine distance in miles
+function haversineDistance(lat1, lon1, lat2, lon2) {
+  const R = 3959;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
 
 // GET /api/cases/:id — Get case details
 router.get('/:id', authenticate, async (req, res, next) => {
@@ -130,7 +171,8 @@ router.post('/:id/accept', authenticate, requireRole('drone_pilot'), async (req,
     await storage.addTimelineEntry(caseItem.id, 'matched', `Pilot accepted the case`, req.userId);
 
     // Notify the pet owner
-    notifyOwnerPilotAssigned(caseItem.owner_id, `${req.user.first_name} ${req.user.last_name}`, caseItem.pet_name).catch(err =>
+    const owner = await storage.findUserById(caseItem.owner_id);
+    notifyOwnerPilotAssigned(caseItem.owner_id, `${req.user.first_name} ${req.user.last_name}`, caseItem.pet_name, owner?.email).catch(err =>
       console.warn('Notification error:', err.message)
     );
 
@@ -168,11 +210,13 @@ router.post('/:id/status', authenticate, async (req, res, next) => {
 
     // Send notifications for key status changes
     if (status === 'searching') {
-      notifyOwnerSearchStarted(caseItem.owner_id, caseItem.pet_name).catch(err =>
+      const owner = await storage.findUserById(caseItem.owner_id);
+      notifyOwnerSearchStarted(caseItem.owner_id, caseItem.pet_name, owner?.email).catch(err =>
         console.warn('Notification error:', err.message)
       );
     } else if (status === 'found') {
-      notifyOwnerPetFound(caseItem.owner_id, caseItem.pet_name).catch(err =>
+      const owner = await storage.findUserById(caseItem.owner_id);
+      notifyOwnerPetFound(caseItem.owner_id, caseItem.pet_name, owner?.email).catch(err =>
         console.warn('Notification error:', err.message)
       );
     }
