@@ -1,5 +1,6 @@
-// LPDR Service Worker — handles push notifications when app is closed
+// LPDR Service Worker v2 — handles push notifications when app is closed
 // This file MUST be at the root for push notifications to work on iOS
+const SW_VERSION = '2.0.0';
 
 // Handle incoming push notifications
 self.addEventListener('push', (event) => {

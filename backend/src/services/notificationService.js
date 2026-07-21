@@ -5,6 +5,9 @@
 
 import { sendEmail } from './mailService.js';
 import { sendPushToUser, sendPushToRole } from './pushService.js';
+import config from '../config/index.js';
+
+const APP_URL = config.appUrl;
 
 /**
  * Notification types
@@ -94,7 +97,7 @@ export async function notify(userId, type, data) {
                   ${data.urgency ? `<div style="margin-top: 0.4rem;"><span style="background: ${data.urgency === 'critical' || data.urgency === 'high' ? 'rgba(239,68,68,0.15)' : 'rgba(250,145,24,0.15)'}; color: ${data.urgency === 'critical' || data.urgency === 'high' ? '#ef4444' : '#fa9118'}; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">${data.urgency} urgency</span></div>` : ''}
                 </div>
                 <p style="color: #94a3b8; line-height: 1.6;">Log into the LPDR app to accept this mission.</p>
-                <a href="https://lpdr-web-production.up.railway.app/pilot/dashboard" style="display: block; text-align: center; background: #fa9118; color: #0c1220; padding: 0.75rem; border-radius: 8px; font-weight: 700; text-decoration: none; margin: 1rem 0;">View Case →</a>
+                <a href="${APP_URL}/pilot/dashboard" style="display: block; text-align: center; background: #fa9118; color: #0c1220; padding: 0.75rem; border-radius: 8px; font-weight: 700; text-decoration: none; margin: 1rem 0;">View Case →</a>
                 <hr style="border: none; border-top: 1px solid #1e2d4a; margin: 1.5rem 0;" />
                 <p style="color: #64748b; font-size: 0.75rem; text-align: center;">Lost Pet Drone Recovery · lostpetdronerecovery.com</p>
               </div>`

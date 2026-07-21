@@ -74,6 +74,14 @@ app.use('/api/content', contentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/push', pushRoutes);
 
+// Rate limit push subscriptions (prevent abuse)
+const pushLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { error: 'Too many push subscription requests' },
+});
+app.use('/api/push/subscribe', pushLimiter);
+
 // Health check
 app.get('/api/health', async (req, res) => {
   const dbUrl = config.database.url;
@@ -150,9 +158,11 @@ app.use(express.static(frontendDist, {
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
     }
-    // API responses never cached
-    if (filePath.startsWith('/api/')) {
+    // Never cache service worker — must always serve latest
+    if (filePath.endsWith('sw.js')) {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
     }
   },
 }));

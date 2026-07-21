@@ -249,7 +249,7 @@ export default function AdminDashboard() {
                   { label: 'Database', value: 'PostgreSQL Connected', color: 'var(--success)' },
                   { label: 'WP Pilot Sync', value: 'Active (25 pilots)', color: 'var(--success)' },
                   { label: 'Email', value: 'SMTP Active', color: 'var(--success)' },
-                  { label: 'App URL', value: 'lpdr-web-production.up.railway.app', color: 'var(--primary)' },
+                  { label: 'App URL', value: window.location.hostname, color: 'var(--primary)' },
                 ].map((row, i) => (
                   <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.4rem 0', borderBottom: i < 4 ? '1px solid var(--border-subtle)' : 'none' }}>
                     <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{row.label}</span>

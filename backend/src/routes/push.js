@@ -9,40 +9,6 @@ router.get('/vapid-key', (req, res) => {
   res.json({ publicKey: getVapidPublicKey() });
 });
 
-// GET /api/push/status — Check push subscription status (debug)
-router.get('/status', authenticate, async (req, res) => {
-  try {
-    const pool = (await import('../config/database.js')).default;
-    const result = await pool.query('SELECT endpoint, created_at FROM push_subscriptions WHERE user_id = $1', [req.user.id]);
-    const allSubs = await pool.query('SELECT user_id, endpoint, created_at FROM push_subscriptions');
-    res.json({
-      mySubscriptions: result.rows.length,
-      myEndpoints: result.rows.map(r => ({ endpoint: r.endpoint.substring(0, 60) + '...', created: r.created_at })),
-      totalSubscriptions: allSubs.rows.length,
-      allSubs: allSubs.rows.map(r => ({ userId: r.user_id, endpoint: r.endpoint.substring(0, 60) + '...' })),
-    });
-  } catch (err) {
-    res.json({ error: err.message });
-  }
-});
-
-// POST /api/push/test — Send a test push notification to yourself
-router.post('/test', authenticate, async (req, res) => {
-  try {
-    const { sendPushToUser } = await import('../services/pushService.js');
-    await sendPushToUser(req.user.id, {
-      title: '🧪 LPDR Test Notification',
-      body: 'If you see this, push notifications are working!',
-      tag: 'test',
-      data: { url: '/pilot/dashboard', type: 'test' },
-      requireInteraction: true,
-    });
-    res.json({ success: true, message: 'Test push sent' });
-  } catch (err) {
-    res.json({ success: false, error: err.message });
-  }
-});
-
 // POST /api/push/subscribe — Register a push subscription
 router.post('/subscribe', authenticate, async (req, res, next) => {
   try {
