@@ -9,6 +9,23 @@ router.get('/vapid-key', (req, res) => {
   res.json({ publicKey: getVapidPublicKey() });
 });
 
+// GET /api/push/status — Check push subscription status (debug)
+router.get('/status', authenticate, async (req, res) => {
+  try {
+    const pool = (await import('../config/database.js')).default;
+    const result = await pool.query('SELECT endpoint, created_at FROM push_subscriptions WHERE user_id = $1', [req.user.id]);
+    const allSubs = await pool.query('SELECT user_id, endpoint, created_at FROM push_subscriptions');
+    res.json({
+      mySubscriptions: result.rows.length,
+      myEndpoints: result.rows.map(r => ({ endpoint: r.endpoint.substring(0, 60) + '...', created: r.created_at })),
+      totalSubscriptions: allSubs.rows.length,
+      allSubs: allSubs.rows.map(r => ({ userId: r.user_id, endpoint: r.endpoint.substring(0, 60) + '...' })),
+    });
+  } catch (err) {
+    res.json({ error: err.message });
+  }
+});
+
 // POST /api/push/subscribe — Register a push subscription
 router.post('/subscribe', authenticate, async (req, res, next) => {
   try {
