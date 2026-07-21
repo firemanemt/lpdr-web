@@ -42,8 +42,12 @@ export default function PilotDashboard() {
     }
   };
 
+  const [toggling, setToggling] = useState(false);
+
   const toggleAvailability = async () => {
+    if (toggling) return; // Prevent rapid double-tap
     const newState = !available;
+    setToggling(true);
     setAvailable(newState);
     try {
       const res = await pilotApi.toggleAvailability(newState);
@@ -54,6 +58,8 @@ export default function PilotDashboard() {
     } catch (err) {
       console.error('Failed to toggle availability:', err);
       setAvailable(!newState); // Rollback
+    } finally {
+      setToggling(false);
     }
   };
 
@@ -94,17 +100,18 @@ export default function PilotDashboard() {
               </div>
             </div>
           </div>
-          <button onClick={toggleAvailability} style={{
+          <button onClick={toggleAvailability} disabled={toggling} style={{
             padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid',
             borderColor: available ? 'var(--success)' : 'var(--border-default)',
             background: available ? 'var(--success-bg)' : 'var(--bg-card)',
             color: available ? 'var(--success)' : 'var(--text-muted)',
-            fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer', fontFamily: 'var(--font-body)',
+            fontWeight: 600, fontSize: '0.8rem', cursor: toggling ? 'wait' : 'pointer', fontFamily: 'var(--font-body)',
             textTransform: 'uppercase', letterSpacing: '0.04em',
             display: 'flex', alignItems: 'center', gap: '0.4rem',
+            opacity: toggling ? 0.6 : 1,
           }}>
             {available ? <FiToggleRight size={18} /> : <FiToggleLeft size={18} />}
-            {available ? 'ON' : 'OFF'}
+            {toggling ? '...' : available ? 'ON' : 'OFF'}
           </button>
         </div>
         
