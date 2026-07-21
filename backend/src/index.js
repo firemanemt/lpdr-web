@@ -102,6 +102,19 @@ app.get('/api/health', async (req, res) => {
       try { const u = new URL(dbUrl); directTest.host = u.hostname; directTest.port = u.port; } catch {}
     }
   }
+  // Try to discover the PostgreSQL service by scanning common hostnames
+  let discoveredHost = null;
+  if (dbUrl && !dbConnected && directTest?.error === 'ENOTFOUND') {
+    const dns = await import('dns');
+    const tryHost = (hostname) => new Promise((resolve) => {
+      dns.resolve(hostname, (err, addrs) => {
+        resolve(err ? null : { hostname, addresses: addrs });
+      });
+    });
+    const commonNames = ['postgres', 'Postgres', 'PostgreSQL', 'postgresql', 'db', 'DB', 'database', 'Database', 'pg', 'PG'];
+    const results = await Promise.all(commonNames.map(n => tryHost(`${n}.railway.internal`)));
+    discoveredHost = results.filter(Boolean);
+  }
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
@@ -113,6 +126,7 @@ app.get('/api/health', async (req, res) => {
     userCount,
     dbError,
     directTest,
+    discoveredHost,
     smtp: !!(config.smtp?.host && config.smtp?.user),
   });
 });
