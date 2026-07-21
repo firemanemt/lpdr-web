@@ -33,7 +33,39 @@ router.get('/live-cases', async (req, res) => {
     const cases = await getWPCases();
     res.json({ cases, total: cases.length, source: 'lostpetdronerecovery.com' });
   } catch (err) {
-    res.json({ cases: [], total: 0 });
+    console.error('Live cases error:', err);
+    res.json({ cases: [], total: 0, error: err.message });
+  }
+});
+
+// GET /api/content/live-cases-debug — Diagnostic endpoint
+router.get('/live-cases-debug', async (req, res) => {
+  try {
+    const WP_BASE = 'https://lostpetdronerecovery.com/wp-json/wp/v2';
+    const wpRes = await fetch(`${WP_BASE}/submit-a-new-case?per_page=3&status=publish`, {
+      headers: { 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(15000),
+    });
+    const contentType = wpRes.headers.get('content-type');
+    const status = wpRes.status;
+    const text = await wpRes.text();
+    let parsed = null;
+    try { parsed = JSON.parse(text); } catch {}
+    
+    res.json({
+      wpStatus: status,
+      contentType,
+      bodyLength: text.length,
+      bodyPreview: text.substring(0, 500),
+      parsedCount: Array.isArray(parsed) ? parsed.length : 'not array',
+      firstCase: Array.isArray(parsed) && parsed[0] ? {
+        id: parsed[0].id,
+        acf: parsed[0].acf,
+        status: parsed[0].status,
+      } : null,
+    });
+  } catch (err) {
+    res.json({ error: err.message, stack: err.stack?.substring(0, 300) });
   }
 });
 
