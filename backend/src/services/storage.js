@@ -748,6 +748,13 @@ export async function initStorage() {
         return storageInstance;
       } catch (err) {
         console.warn('⚠️ PostgreSQL connection failed, falling back to in-memory:', err.message);
+        console.warn('⚠️ DATABASE_URL starts with:', dbUrl?.substring(0, 40) + '...');
+        console.warn('⚠️ Full error:', err.code, err.message);
+        // Try to parse and diagnose the URL
+        try {
+          const url = new URL(dbUrl);
+          console.warn(`⚠️ DB host: ${url.hostname}, port: ${url.port}, user: ${url.username}, db: ${url.pathname.slice(1)}`);
+        } catch {}
       }
     }
 

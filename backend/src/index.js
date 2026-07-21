@@ -78,11 +78,29 @@ app.get('/api/health', async (req, res) => {
   const storage = getStorage();
   const isPostgres = !!storage.pool;
   let dbConnected = false;
+  let dbError = null;
+  let userCount = 0;
   if (isPostgres) {
     try {
       await storage.pool.query('SELECT 1');
       dbConnected = true;
-    } catch { dbConnected = false; }
+      const countResult = await storage.pool.query('SELECT COUNT(*) FROM users');
+      userCount = parseInt(countResult.rows[0].count);
+    } catch (e) { dbConnected = false; dbError = e.message; }
+  }
+  // Also try a direct fresh connection test if DATABASE_URL is set but not connected
+  let directTest = null;
+  if (dbUrl && !dbConnected) {
+    try {
+      const pg = (await import('pg')).default;
+      const testPool = new pg.Pool({ connectionString: dbUrl, connectionTimeoutMillis: 5000 });
+      const result = await testPool.query('SELECT current_database(), current_user, inet_server_addr()');
+      directTest = { connected: true, info: result.rows[0] };
+      await testPool.end();
+    } catch (e) {
+      directTest = { connected: false, error: e.code || e.message, host: null };
+      try { const u = new URL(dbUrl); directTest.host = u.hostname; directTest.port = u.port; } catch {}
+    }
   }
   res.json({ 
     status: 'ok', 
@@ -92,6 +110,9 @@ app.get('/api/health', async (req, res) => {
     database: dbConnected,
     databaseConfigured: !!dbUrl,
     storageType: isPostgres ? 'PostgreSQL' : 'In-Memory (DEMO)',
+    userCount,
+    dbError,
+    directTest,
     smtp: !!(config.smtp?.host && config.smtp?.user),
   });
 });
