@@ -74,7 +74,10 @@ export async function getWPCases() {
     has_contact_info: !!(c.phone || c.email), // Let UI know contact exists but don't expose it
   }));
 
-  cache.cases = { data: publicCases, timestamp: Date.now() };
+  // Only cache if we got results, otherwise let it retry next time
+  if (publicCases.length > 0) {
+    cache.cases = { data: publicCases, timestamp: Date.now() };
+  }
   return publicCases;
 }
 
@@ -126,7 +129,10 @@ export async function getWPCasesFull() {
     };
   });
 
-  cache.casesFull = { data: cases, timestamp: Date.now() };
+  // Only cache if we actually got results
+  if (cases.length > 0) {
+    cache.casesFull = { data: cases, timestamp: Date.now() };
+  }
   return cases;
 }
 
@@ -265,6 +271,19 @@ export async function getWPTotalCaseCount() {
     console.warn('WP total count fetch failed:', err.message);
     return null;
   }
+}
+
+/**
+ * Clear all caches (for debugging or forced refresh)
+ */
+export function clearCache() {
+  cache = {
+    cases: { data: null, timestamp: 0 },
+    casesFull: { data: null, timestamp: 0 },
+    testimonials: { data: null, timestamp: 0 },
+    faqs: { data: null, timestamp: 0 },
+  };
+  console.log('🔄 WP cache cleared');
 }
 
 /**

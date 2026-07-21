@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import storage from '../services/storage.js';
-import { getWPCases, getWPCasesFull, getWPCaseFull, getWPTestimonials, getWPFAQs, getWPTotalCaseCount } from '../services/wpSync.js';
+import { getWPCases, getWPCasesFull, getWPCaseFull, getWPTestimonials, getWPFAQs, getWPTotalCaseCount, clearCache } from '../services/wpSync.js';
 import { getWPPilots } from '../services/wpPilotSync.js';
 
 const router = Router();
@@ -30,6 +30,9 @@ router.get('/faqs', async (req, res) => {
 // PUBLIC — strips owner phone/email for privacy
 router.get('/live-cases', async (req, res) => {
   try {
+    if (req.query.refresh === 'true') {
+      clearCache();
+    }
     const cases = await getWPCases();
     res.json({ cases, total: cases.length, source: 'lostpetdronerecovery.com' });
   } catch (err) {
