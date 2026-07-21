@@ -251,13 +251,17 @@ export default function PilotDashboard() {
                 </div>
               </div>
             </div>
-            {(!profile?.verification_status || profile?.verification_status === 'unsubmitted' || profile?.verification_status === 'rejected') && (
-              <div style={{ borderTop: '1px solid var(--border-subtle)', padding: '0.75rem 1rem' }}>
+            <div style={{ borderTop: '1px solid var(--border-subtle)', padding: '0.75rem 1rem' }}>
+              {profile?.verification_status === 'approved' ? (
+                <div style={{ fontSize: '0.85rem', color: 'var(--success)', textAlign: 'center', fontWeight: 600 }}>
+                  ✓ FAA Part 107 Verified
+                </div>
+              ) : (
                 <Link to="/pilot/verification" className="btn btn-accent btn-sm" style={{ width: '100%', textDecoration: 'none' }}>
-                  <FiShield size={14} /> Get Verified to Appear on Map
+                  <FiShield size={14} /> {profile?.verification_status === 'pending' ? 'View Verification Status' : 'Submit FAA Verification'}
                 </Link>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>

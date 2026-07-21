@@ -206,9 +206,18 @@ async function start() {
             insuranceProvider: null,
             insurancePolicyNumber: null,
           });
+          // Auto-approve verification for Josh
+          await storage.reviewPilotVerification(user.id, 'approved', 'Site owner');
         }
 
         console.log(`✅ Seeded account: ${account.email} (${account.role})`);
+      } else if (account.role === 'drone_pilot') {
+        // If account exists but isn't verified yet, approve it
+        const profile = await storage.getPilotProfile(existing.id);
+        if (profile?.profile && !profile.profile.verified && profile.profile.verification_status !== 'approved') {
+          await storage.reviewPilotVerification(existing.id, 'approved', 'Site owner');
+          console.log(`✅ Auto-approved verification: ${account.email}`);
+        }
       }
     }
   } catch (err) {

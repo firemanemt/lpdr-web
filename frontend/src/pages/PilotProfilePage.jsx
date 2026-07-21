@@ -184,6 +184,24 @@ export default function PilotProfilePage() {
           </div>
         </div>
 
+        {/* Verification Status */}
+        <div style={{ background: 'var(--primary-bg)', border: '1px solid rgba(4,107,210,0.2)', borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>
+              <FiShield size={12} style={{ verticalAlign: 'middle', marginRight: '0.3rem' }} />
+              FAA Verification
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+              Required to appear on the pilot map
+            </div>
+          </div>
+          <Link to="/pilot/verification" style={{ textDecoration: 'none' }}>
+            <button className="btn btn-primary btn-sm">
+              Submit / View
+            </button>
+          </Link>
+        </div>
+
         {/* Equipment */}
         <div className="section-title">
           🛸 Equipment
