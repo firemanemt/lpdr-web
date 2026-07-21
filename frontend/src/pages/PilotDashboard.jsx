@@ -85,12 +85,10 @@ export default function PilotDashboard() {
     try { await caseApi.updateStatus(caseId, status); loadData(); } catch (err) { console.error('Failed to update status:', err); }
   };
 
-  if (loading) return <LoadingSpinner text="Loading pilot dashboard..." />;
-
   const activeCases = cases.filter(c => ['matched', 'searching'].includes(c.status));
   const availableCases = cases.filter(c => c.status === 'notifying');
 
-  // Notify when new cases appear
+  // Notify when new cases appear — MUST be before any conditional return (React hooks rule)
   useEffect(() => {
     if (availableCases.length > prevCaseCount.current && prevCaseCount.current >= 0) {
       const newCase = availableCases[availableCases.length - 1];
@@ -100,6 +98,8 @@ export default function PilotDashboard() {
     }
     prevCaseCount.current = availableCases.length;
   }, [availableCases.length]);
+
+  if (loading) return <LoadingSpinner text="Loading pilot dashboard..." />;
   const completedCases = cases.filter(c => ['found', 'completed', 'reviewed'].includes(c.status));
 
   return (
