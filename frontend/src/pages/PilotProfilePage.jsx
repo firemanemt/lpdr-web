@@ -203,7 +203,7 @@ export default function PilotProfilePage() {
           </div>
           <Link to="/pilot/verification" style={{ textDecoration: 'none' }}>
             <button className="btn btn-primary btn-sm">
-              Submit / View
+              View Status
             </button>
           </Link>
         </div>

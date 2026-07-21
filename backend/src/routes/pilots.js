@@ -45,7 +45,6 @@ router.get('/', optionalAuth, async (req, res, next) => {
         emailVerified: p.email_verified,
         profile: {
           ...p.profile,
-          // Remove sensitive verification details from public list
           faa_cert_number: p.profile?.verified ? p.profile.faa_cert_number : null,
           insurance_provider: null,
           insurance_policy_number: null,
@@ -63,36 +62,11 @@ router.get('/', optionalAuth, async (req, res, next) => {
   }
 });
 
-// GET /api/pilots/:id — Get pilot profile
-router.get('/:id', optionalAuth, async (req, res, next) => {
-  try {
-    const pilot = await storage.getPilotProfile(req.params.id);
-    if (!pilot) {
-      throw new AppError('Pilot not found', 404);
-    }
-    const { password, email_verification_token, password_reset_token, ...safePilot } = pilot;
-    // Don't expose sensitive verification details publicly
-    if (safePilot.profile) {
-      safePilot.profile.insurance_policy_number = null;
-      safePilot.profile.verification_notes = null;
-    }
-    res.json({ pilot: safePilot });
-  } catch (err) {
-    next(err);
-  }
-});
+// ============================
+// /me/ routes MUST come before /:id to avoid Express matching 'me' as an ID
+// ============================
 
-// GET /api/pilots/:id/reviews — Get pilot reviews
-router.get('/:id/reviews', async (req, res, next) => {
-  try {
-    const reviews = await storage.getReviewsForPilot(req.params.id);
-    res.json({ reviews });
-  } catch (err) {
-    next(err);
-  }
-});
-
-// PUT /api/pilots/me/profile — Update own pilot profile (requires pilot role)
+// PUT /api/pilots/me/profile — Update own pilot profile
 router.put('/me/profile', authenticate, requireRole('drone_pilot'), async (req, res, next) => {
   try {
     const pilotId = req.userId;
@@ -108,7 +82,7 @@ router.put('/me/profile', authenticate, requireRole('drone_pilot'), async (req, 
     }
 
     // Update pilot profile
-    const profile = await storage.updatePilotProfile(pilotId, {
+    await storage.updatePilotProfile(pilotId, {
       bio: updates.bio,
       base_lat: updates.baseLat,
       base_lng: updates.baseLng,
@@ -118,7 +92,6 @@ router.put('/me/profile', authenticate, requireRole('drone_pilot'), async (req, 
 
     // Update equipment if provided
     if (updates.equipment && storage.pool) {
-      // PostgreSQL: delete old, insert new
       await storage.pool.query('DELETE FROM pilot_equipment WHERE pilot_id = $1', [pilotId]);
       for (const eq of updates.equipment) {
         await storage.pool.query(
@@ -130,7 +103,6 @@ router.put('/me/profile', authenticate, requireRole('drone_pilot'), async (req, 
         );
       }
     } else if (updates.equipment && storage.pilotEquipment) {
-      // In-memory fallback
       storage.pilotEquipment = storage.pilotEquipment.filter(e => e.pilot_id !== pilotId);
       for (const eq of updates.equipment) {
         storage.pilotEquipment.push({
@@ -154,13 +126,23 @@ router.put('/me/profile', authenticate, requireRole('drone_pilot'), async (req, 
   }
 });
 
-// POST /api/pilots/me/verification — Submit pilot verification (FAA Part 107, insurance)
+// PUT /api/pilots/me/availability — Toggle availability
+router.put('/me/availability', authenticate, requireRole('drone_pilot'), async (req, res, next) => {
+  try {
+    const { available } = req.body;
+    const profile = await storage.updatePilotProfile(req.userId, { available });
+    res.json({ available: profile.available });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/pilots/me/verification — Submit pilot verification
 router.post('/me/verification', authenticate, requireRole('drone_pilot'), validate(pilotVerificationSchema), async (req, res, next) => {
   try {
     const pilotId = req.userId;
     const { faaCertNumber, insuranceProvider, insurancePolicyNumber } = req.validatedBody;
 
-    // Check if already verified or pending
     const pilot = await storage.getPilotProfile(pilotId);
     if (!pilot) {
       throw new AppError('Pilot profile not found', 404);
@@ -213,23 +195,44 @@ router.get('/me/verification', authenticate, requireRole('drone_pilot'), async (
   }
 });
 
-// PUT /api/pilots/me/availability — Toggle availability
-router.put('/me/availability', authenticate, requireRole('drone_pilot'), async (req, res, next) => {
-  try {
-    const { available } = req.body;
-    const profile = await storage.updatePilotProfile(req.userId, { available });
-    res.json({ available: profile.available });
-  } catch (err) {
-    next(err);
-  }
-});
-
 // POST /api/pilots/me/location — Update GPS location
 router.post('/me/location', authenticate, requireRole('drone_pilot'), async (req, res, next) => {
   try {
     const { lat, lng, heading, speed } = req.body;
     const location = await storage.updatePilotLocation(req.userId, lat, lng, heading, speed);
     res.json({ location });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ============================
+// Dynamic /:id routes come LAST
+// ============================
+
+// GET /api/pilots/:id — Get pilot profile
+router.get('/:id', optionalAuth, async (req, res, next) => {
+  try {
+    const pilot = await storage.getPilotProfile(req.params.id);
+    if (!pilot) {
+      throw new AppError('Pilot not found', 404);
+    }
+    const { password, email_verification_token, password_reset_token, ...safePilot } = pilot;
+    if (safePilot.profile) {
+      safePilot.profile.insurance_policy_number = null;
+      safePilot.profile.verification_notes = null;
+    }
+    res.json({ pilot: safePilot });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/pilots/:id/reviews — Get pilot reviews
+router.get('/:id/reviews', async (req, res, next) => {
+  try {
+    const reviews = await storage.getReviewsForPilot(req.params.id);
+    res.json({ reviews });
   } catch (err) {
     next(err);
   }

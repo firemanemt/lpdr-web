@@ -27,7 +27,7 @@ export default function Layout() {
 
   const isActive = (path) => {
     if (path === '/' && location.pathname === '/') return true;
-    if (path !== '/' && location.pathname.startsWith(path)) return true;
+    if (path !== '/' && location.pathname === path) return true;
     return false;
   };
 
@@ -68,7 +68,7 @@ export default function Layout() {
       {/* Bottom Navigation */}
       {isAuthenticated ? (
         <nav className="bottom-nav">
-          <Link to={getDashboardLink()} className={`bottom-nav-item ${isActive('/owner/dashboard') || isActive('/pilot/dashboard') ? 'active' : ''}`}>
+          <Link to="/" className={`bottom-nav-item ${location.pathname === '/' ? 'active' : ''}`}>
             <FiHome size={20} />
             Home
           </Link>
@@ -86,7 +86,7 @@ export default function Layout() {
             <FiMapPin size={20} />
             Map
           </Link>
-          <Link to={isDronePilot ? '/pilot/profile' : isPetOwner ? '/owner/dashboard' : '/admin'} className={`bottom-nav-item ${isActive('/pilot/profile') || isActive('/owner/dashboard') && isPetOwner ? 'active' : ''}`}>
+          <Link to={isDronePilot ? '/pilot/profile' : isPetOwner ? '/owner/dashboard' : '/admin'} className={`bottom-nav-item ${location.pathname === '/pilot/profile' || location.pathname === '/owner/dashboard' ? 'active' : ''}`}>
             <FiUser size={20} />
             Profile
           </Link>
