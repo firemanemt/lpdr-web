@@ -1,152 +1,210 @@
 /**
- * Notification Service (Frontend)
- * Handles browser push notifications and sound alerts
+ * Push Notification Service
+ * Handles Web Push subscription for background notifications
  */
 
-let notificationPermission = null;
+const VAPID_KEY_ENDPOINT = '/api/push/vapid-key';
+
+let swRegistration = null;
 
 /**
- * Request notification permission from the user
+ * Convert base64 VAPID key to Uint8Array for the Push API
  */
-export async function requestNotificationPermission() {
-  if (!('Notification' in window)) {
-    console.log('This browser does not support notifications');
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+/**
+ * Initialize push notifications — call after login
+ * Returns true if subscribed successfully
+ */
+export async function initPushNotifications() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    console.log('📱 Push not supported in this browser');
     return false;
   }
 
   try {
-    const permission = await Notification.requestPermission();
-    notificationPermission = permission;
-    return permission === 'granted';
-  } catch (err) {
-    console.warn('Notification permission error:', err);
-    return false;
-  }
-}
+    // Register service worker
+    swRegistration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+    console.log('📱 Service worker registered');
 
-/**
- * Check if we have notification permission
- */
-export function hasNotificationPermission() {
-  if (!('Notification' in window)) return false;
-  return Notification.permission === 'granted';
-}
+    // Wait for it to be ready
+    await navigator.serviceWorker.ready;
 
-/**
- * Show a browser notification
- */
-export function showNotification(title, options = {}) {
-  if (!hasNotificationPermission()) {
-    // Try requesting permission first time
-    requestNotificationPermission();
-    return;
-  }
-
-  try {
-    const notification = new Notification(title, {
-      icon: '/lpdr-logo.png',
-      badge: '/lpdr-logo.png',
-      tag: options.tag || 'lpdr-notification',
-      ...options,
-    });
-
-    notification.onclick = () => {
-      window.focus();
-      if (options.url) {
-        window.location.href = options.url;
-      }
-      notification.close();
-    };
-
-    // Auto-close after 10 seconds
-    setTimeout(() => notification.close(), 10000);
-  } catch (err) {
-    console.warn('Notification error:', err);
-  }
-}
-
-/**
- * Play notification sound
- */
-let audioContext = null;
-
-export function playNotificationSound() {
-  try {
-    if (!audioContext) {
-      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    // Check if already subscribed
+    const existingSub = await swRegistration.pushManager.getSubscription();
+    if (existingSub) {
+      console.log('📱 Already subscribed to push');
+      // Re-send to backend in case it was lost
+      await sendSubscriptionToBackend(existingSub);
+      return true;
     }
 
-    // Create a simple two-tone notification beep
-    const oscillator1 = audioContext.createOscillator();
-    const oscillator2 = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
+    // Get VAPID public key from backend
+    const response = await fetch(VAPID_KEY_ENDPOINT);
+    const { publicKey } = await response.json();
+    if (!publicKey) {
+      console.warn('📱 No VAPID key from server');
+      return false;
+    }
 
-    oscillator1.connect(gainNode);
-    oscillator2.connect(gainNode);
-    gainNode.connect(audioContext.destination);
+    // Subscribe
+    const subscription = await swRegistration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey),
+    });
 
-    oscillator1.frequency.value = 880; // A5
-    oscillator2.frequency.value = 1100; // ~C#6
-    oscillator1.type = 'sine';
-    oscillator2.type = 'sine';
-    gainNode.gain.value = 0.15;
-
-    const now = audioContext.currentTime;
-    oscillator1.start(now);
-    oscillator1.stop(now + 0.15);
-    oscillator2.start(now + 0.2);
-    oscillator2.stop(now + 0.35);
+    // Send to backend
+    await sendSubscriptionToBackend(subscription);
+    console.log('📱 Push notifications enabled');
+    return true;
   } catch (err) {
-    // Audio might not be available
-    console.warn('Sound notification error:', err);
+    if (err.name === 'NotAllowedError') {
+      console.log('📱 Push permission denied by user');
+    } else {
+      console.warn('📱 Push subscription failed:', err.message);
+    }
+    return false;
   }
 }
 
 /**
- * Notify about a new case (for pilots)
+ * Send subscription to backend
  */
-export function notifyNewCase(petName, address) {
+async function sendSubscriptionToBackend(subscription) {
+  const token = localStorage.getItem('lpdr_token');
+  if (!token) return;
+
+  await fetch('/api/push/subscribe', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      subscription: {
+        endpoint: subscription.endpoint,
+        keys: subscription.toJSON().keys,
+      },
+    }),
+  });
+}
+
+/**
+ * Unsubscribe from push notifications — call on logout
+ */
+export async function unsubscribePush() {
+  try {
+    if (!swRegistration) {
+      swRegistration = await navigator.serviceWorker.getRegistration();
+    }
+    if (!swRegistration) return;
+
+    const subscription = await swRegistration.pushManager.getSubscription();
+    if (subscription) {
+      // Tell backend to remove it
+      const token = localStorage.getItem('lpdr_token');
+      if (token) {
+        await fetch('/api/push/unsubscribe', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ endpoint: subscription.endpoint }),
+        }).catch(() => {});
+      }
+      await subscription.unsubscribe();
+      console.log('📱 Push notifications disabled');
+    }
+  } catch (err) {
+    console.warn('📱 Push unsubscribe failed:', err.message);
+  }
+}
+
+/**
+ * Request notification permission (for in-app notification fallback)
+ */
+export function requestNotificationPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+/**
+ * Play a notification sound using AudioContext
+ */
+export function playNotificationSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.frequency.value = 880;
+    gain1.gain.value = 0.3;
+    osc1.start(ctx.currentTime);
+    osc1.stop(ctx.currentTime + 0.1);
+
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.frequency.value = 1100;
+    gain2.gain.value = 0.3;
+    osc2.start(ctx.currentTime + 0.15);
+    osc2.stop(ctx.currentTime + 0.25);
+
+    setTimeout(() => ctx.close(), 500);
+  } catch {}
+}
+
+/**
+ * Show an in-app notification (fallback for when app is in foreground)
+ */
+export function showNotification(title, options = {}) {
   playNotificationSound();
-  showNotification(`🐾 New Lost Pet: ${petName}`, {
-    body: `Last seen near ${address}`,
+  if (swRegistration && Notification.permission === 'granted') {
+    swRegistration.showNotification(title, {
+      icon: '/lpdr-logo.png',
+      badge: '/lpdr-logo.png',
+      vibrate: [200, 100, 200],
+      ...options,
+    });
+  }
+}
+
+// Legacy compatibility with existing notification service
+export function notifyNewCase(petName, location) {
+  showNotification(`🐾 New Case: ${petName}`, {
+    body: `Lost pet reported in ${location}`,
     tag: 'new-case',
-    url: '/pilot/dashboard',
+    data: { url: '/pilot/dashboard' },
+    requireInteraction: true,
   });
 }
 
-/**
- * Notify about a new message
- */
-export function notifyNewMessage(senderName, preview) {
-  playNotificationSound();
-  showNotification(`💬 ${senderName}`, {
-    body: preview || 'Sent you a message',
-    tag: 'new-message',
+export function notifyNewMessage(senderName, caseId) {
+  showNotification(`💬 Message from ${senderName}`, {
+    body: 'You have a new message',
+    tag: `msg-${caseId}`,
+    data: { url: `/cases/${caseId}` },
   });
 }
 
-/**
- * Notify about case status change (for owners)
- */
-export function notifyCaseUpdate(status, petName) {
-  playNotificationSound();
-  const messages = {
-    matched: `A pilot has been assigned to find ${petName}!`,
-    searching: `The search for ${petName} has started!`,
-    found: `🎉 ${petName} has been found!`,
-  };
+export function notifyCaseUpdate(status, petName, caseId) {
   showNotification(`📋 Case Update: ${petName}`, {
-    body: messages[status] || `Status changed to ${status}`,
-    tag: 'case-update',
+    body: `Status changed to ${status}`,
+    tag: `case-${caseId}`,
+    data: { url: `/cases/${caseId}` },
   });
 }
-
-export default {
-  requestNotificationPermission,
-  hasNotificationPermission,
-  showNotification,
-  playNotificationSound,
-  notifyNewCase,
-  notifyNewMessage,
-  notifyCaseUpdate,
-};

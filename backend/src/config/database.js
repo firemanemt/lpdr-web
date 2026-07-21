@@ -192,6 +192,17 @@ export async function initDatabase() {
         created_at TIMESTAMP DEFAULT NOW()
       );
 
+      -- Push Subscriptions (Web Push)
+      CREATE TABLE IF NOT EXISTS push_subscriptions (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        endpoint TEXT UNIQUE NOT NULL,
+        p256dh TEXT NOT NULL,
+        auth TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+
       -- Create indexes
       CREATE INDEX IF NOT EXISTS idx_cases_owner ON cases(owner_id);
       CREATE INDEX IF NOT EXISTS idx_cases_pilot ON cases(pilot_id);

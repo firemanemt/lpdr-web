@@ -15,6 +15,10 @@ export function AuthProvider({ children }) {
     if (token && savedUser) {
       try {
         setUser(JSON.parse(savedUser));
+        // Re-subscribe to push on returning session
+        import('../services/notificationService').then(({ initPushNotifications }) => {
+          initPushNotifications().catch(() => {});
+        });
       } catch {
         localStorage.removeItem('lpdr_token');
         localStorage.removeItem('lpdr_user');
@@ -30,6 +34,12 @@ export function AuthProvider({ children }) {
     localStorage.setItem('lpdr_token', token);
     localStorage.setItem('lpdr_user', JSON.stringify(userData));
     setUser(userData);
+
+    // Subscribe to push notifications after login
+    try {
+      const { initPushNotifications } = await import('../services/notificationService');
+      await initPushNotifications();
+    } catch {}
     
     return userData;
   }, []);
@@ -45,7 +55,12 @@ export function AuthProvider({ children }) {
     return userData;
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    // Unsubscribe from push before clearing token
+    try {
+      const { unsubscribePush } = await import('../services/notificationService');
+      await unsubscribePush();
+    } catch {}
     localStorage.removeItem('lpdr_token');
     localStorage.removeItem('lpdr_user');
     setUser(null);
