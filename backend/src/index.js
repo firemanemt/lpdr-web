@@ -167,23 +167,6 @@ async function start() {
     console.warn('⚠️ Storage init failed, running in demo mode:', err.message);
   }
 
-  // Clean up pet owner accounts on startup (keeps DB clean between deploys)
-  try {
-    const storage = (await import('./services/storage.js')).default;
-    if (config.database.url && storage.pool) {
-      // Delete child records first (FK constraints), then cases, then pet owners
-      await storage.pool.query(`DELETE FROM messages WHERE case_id IN (SELECT id FROM cases WHERE owner_id IN (SELECT id FROM users WHERE role = 'pet_owner'))`);
-      await storage.pool.query(`DELETE FROM case_photos WHERE case_id IN (SELECT id FROM cases WHERE owner_id IN (SELECT id FROM users WHERE role = 'pet_owner'))`);
-      await storage.pool.query(`DELETE FROM cases WHERE owner_id IN (SELECT id FROM users WHERE role = 'pet_owner')`);
-      const delResult = await storage.pool.query(`DELETE FROM users WHERE role = 'pet_owner'`);
-      if (delResult.rowCount > 0) {
-        console.log(`🧹 Cleaned ${delResult.rowCount} pet owner account(s) on startup`);
-      }
-    }
-  } catch (err) {
-    console.warn('⚠️ Pet owner cleanup failed:', err.message);
-  }
-
   // Seed essential accounts if they don't exist
   try {
     const storage = (await import('./services/storage.js')).default;
