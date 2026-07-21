@@ -82,13 +82,7 @@ export default function Layout() {
               Report
             </Link>
           )}
-          {!isPetOwner && (
-            <Link to="/map" className={`bottom-nav-item ${isActive('/map') ? 'active' : ''}`}>
-              <FiMapPin size={20} />
-              Map
-            </Link>
-          )}
-          <Link to="/map" className={`bottom-nav-item ${isActive('/map') && !isPetOwner ? '' : isActive('/map') ? 'active' : ''}`}>
+          <Link to="/map" className={`bottom-nav-item ${isActive('/map') ? 'active' : ''}`}>
             <FiMapPin size={20} />
             Map
           </Link>
