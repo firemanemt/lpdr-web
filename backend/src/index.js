@@ -111,9 +111,30 @@ app.get('/api/health', async (req, res) => {
         resolve(err ? null : { hostname, addresses: addrs });
       });
     });
-    const commonNames = ['postgres', 'Postgres', 'PostgreSQL', 'postgresql', 'db', 'DB', 'database', 'Database', 'pg', 'PG'];
+    const commonNames = ['postgres', 'Postgres', 'PostgreSQL', 'postgresql', 'db', 'DB', 'database', 'Database', 'pg', 'PG', 'lpdr-postgres', 'LPDR-Postgres', 'lpdr-db', 'LPDR-DB', 'LPDR-PostgreSQL', 'lpdr-postgresql', 'railway-postgres', 'web-db', 'api-db', 'app-db', 'lpdrweb-db', 'lpdrweb-postgres'];
     const results = await Promise.all(commonNames.map(n => tryHost(`${n}.railway.internal`)));
     discoveredHost = results.filter(Boolean);
+    
+    // If nothing found on .internal, also try scanning all RAILWAY env vars for clues
+    if (discoveredHost.length === 0) {
+      // Try DNS resolve on the web service's own domain to confirm DNS works
+      const selfTest = await tryHost('lpdr-web.railway.internal');
+      discoveredHost = { scanFailed: true, selfTest, scannedHosts: commonNames.length };
+    }
+  }
+  // Try the DATABASE_PUBLIC_URL if available (public internet connection)
+  let publicDbTest = null;
+  const publicDbUrl = process.env.DATABASE_PUBLIC_URL;
+  if (publicDbUrl) {
+    try {
+      const pg = (await import('pg')).default;
+      const testPool = new pg.Pool({ connectionString: publicDbUrl, connectionTimeoutMillis: 5000 });
+      const result = await testPool.query('SELECT 1');
+      publicDbTest = { connected: true };
+      await testPool.end();
+    } catch (e) {
+      try { const u = new URL(publicDbUrl); publicDbTest = { connected: false, error: e.code || e.message, host: u.hostname }; } catch { publicDbTest = { connected: false, error: e.message }; }
+    }
   }
   res.json({ 
     status: 'ok', 
@@ -127,6 +148,7 @@ app.get('/api/health', async (req, res) => {
     dbError,
     directTest,
     discoveredHost,
+    publicDbTest,
     railwayEnv: {
       SERVICE_ID: process.env.RAILWAY_SERVICE_ID,
       SERVICE_NAME: process.env.RAILWAY_SERVICE_NAME,
