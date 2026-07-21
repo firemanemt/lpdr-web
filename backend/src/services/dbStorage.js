@@ -572,6 +572,13 @@ class DatabaseStorage {
   // ADMIN METHODS
   // ============================
 
+  async deleteUser(id) {
+    // Delete pilot profile first (FK constraint), then user
+    await this.pool.query('DELETE FROM pilot_profiles WHERE id = $1', [id]).catch(() => {});
+    const result = await this.pool.query('DELETE FROM users WHERE id = $1 RETURNING id', [id]);
+    return result.rows.length > 0;
+  }
+
   async getAllUsers(role, limit = 50, offset = 0) {
     let query = 'SELECT id, email, first_name, last_name, phone, role, email_verified, created_at FROM users';
     const params = [];

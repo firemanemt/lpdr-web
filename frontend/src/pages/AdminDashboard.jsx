@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { adminApi } from '../services/api';
-import { FiUsers, FiRadio, FiCheck, FiX, FiClock, FiMapPin, FiMail, FiPhone, FiShield, FiActivity, FiSearch, FiSend, FiAlertCircle, FiChevronRight, FiEye, FiUserCheck, FiUserX } from 'react-icons/fi';
+import { FiUsers, FiRadio, FiCheck, FiX, FiClock, FiMapPin, FiMail, FiPhone, FiShield, FiActivity, FiSearch, FiSend, FiAlertCircle, FiChevronRight, FiEye, FiUserCheck, FiUserX, FiTrash2 } from 'react-icons/fi';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 export default function AdminDashboard() {
@@ -358,6 +358,22 @@ export default function AdminDashboard() {
                           <span style={{ color: 'var(--success)', fontSize: '0.7rem', fontWeight: 700 }}>✓</span>
                         )}
                         {roleBadge(u.role)}
+                        <button
+                          onClick={async () => {
+                            if (confirm(`Delete ${u.first_name} ${u.last_name} (${u.email})? This cannot be undone.`)) {
+                              try {
+                                await adminApi.deleteUser(u.id);
+                                setUsers(prev => prev.filter(x => x.id !== u.id));
+                              } catch (err) {
+                                alert(err.response?.data?.error || 'Failed to delete user');
+                              }
+                            }
+                          }}
+                          style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '0.2rem', opacity: 0.6 }}
+                          title="Delete user"
+                        >
+                          <FiTrash2 size={14} />
+                        </button>
                       </div>
                     </div>
                     <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.4rem', fontFamily: 'var(--font-mono)' }}>

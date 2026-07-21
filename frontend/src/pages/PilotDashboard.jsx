@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { caseApi, pilotApi } from '../services/api';
-import { FiToggleLeft, FiToggleRight, FiMapPin, FiStar, FiClock, FiPhone, FiDollarSign, FiChevronRight, FiRadio, FiShield } from 'react-icons/fi';
+import { FiToggleLeft, FiToggleRight, FiMapPin, FiStar, FiClock, FiPhone, FiDollarSign, FiChevronRight, FiRadio, FiShield, FiEdit3 } from 'react-icons/fi';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 const statusConfig = {
@@ -222,7 +222,12 @@ export default function PilotDashboard() {
 
         {/* Profile Summary */}
         <div style={{ marginTop: '1.5rem' }}>
-          <div className="section-title">Pilot Profile</div>
+          <div className="section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>Pilot Profile</span>
+            <Link to="/pilot/profile" style={{ fontSize: '0.8rem', color: 'var(--primary)', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+              <FiEdit3 size={12} /> Edit
+            </Link>
+          </div>
           <div className="card">
             <div style={{ padding: '1rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
               <div>

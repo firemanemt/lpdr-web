@@ -104,6 +104,7 @@ export const adminApi = {
   reviewVerification: (id, status, notes) => api.post(`/admin/verifications/${id}/review`, { status, notes }),
   assignPilot: (caseId, pilotId) => api.post(`/admin/cases/${caseId}/assign`, { pilotId }),
   broadcast: (message) => api.post('/admin/broadcast', { message }),
+  deleteUser: (id) => api.delete(`/admin/users/${id}`),
 };
 
 export default api;

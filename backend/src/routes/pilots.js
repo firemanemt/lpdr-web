@@ -97,7 +97,17 @@ router.put('/me/profile', authenticate, requireRole('drone_pilot'), async (req, 
   try {
     const pilotId = req.userId;
     const updates = req.body;
-    
+
+    // Update basic user info if provided
+    if (updates.firstName || updates.lastName || updates.phone) {
+      await storage.updateUser(pilotId, {
+        ...(updates.firstName ? { first_name: updates.firstName } : {}),
+        ...(updates.lastName ? { last_name: updates.lastName } : {}),
+        ...(updates.phone ? { phone: updates.phone } : {}),
+      });
+    }
+
+    // Update pilot profile
     const profile = await storage.updatePilotProfile(pilotId, {
       bio: updates.bio,
       base_lat: updates.baseLat,
@@ -107,38 +117,32 @@ router.put('/me/profile', authenticate, requireRole('drone_pilot'), async (req, 
     });
 
     // Update equipment if provided
-    if (updates.equipment) {
-      // For demo/in-memory: clear and re-add
+    if (updates.equipment && storage.pool) {
+      // PostgreSQL: delete old, insert new
+      await storage.pool.query('DELETE FROM pilot_equipment WHERE pilot_id = $1', [pilotId]);
+      for (const eq of updates.equipment) {
+        await storage.pool.query(
+          `INSERT INTO pilot_equipment (id, pilot_id, drone_model, has_thermal, has_spotlight, has_speaker, camera_type, notes)
+           VALUES (uuid_generate_v4(), $1, $2, $3, $4, $5, $6, $7)`,
+          [pilotId, eq.droneModel || eq.drone_model || null, eq.hasThermal || eq.has_thermal || false,
+           eq.hasSpotlight || eq.has_spotlight || false, eq.hasSpeaker || eq.has_speaker || false,
+           eq.cameraType || eq.camera_type || null, eq.notes || null]
+        );
+      }
+    } else if (updates.equipment && storage.pilotEquipment) {
+      // In-memory fallback
       storage.pilotEquipment = storage.pilotEquipment.filter(e => e.pilot_id !== pilotId);
       for (const eq of updates.equipment) {
-        if (storage.pilotEquipment) {
-          storage.pilotEquipment.push({
-            id: crypto.randomUUID?.() || (await import('uuid')).v4(),
-            pilot_id: pilotId,
-            drone_model: eq.droneModel || eq.drone_model,
-            has_thermal: eq.hasThermal || eq.has_thermal || false,
-            has_spotlight: eq.hasSpotlight || eq.has_spotlight || false,
-            has_speaker: eq.hasSpeaker || eq.has_speaker || false,
-            camera_type: eq.cameraType || eq.camera_type,
-            notes: eq.notes,
-          });
-        }
-      }
-    }
-
-    // Update pricing if provided
-    if (updates.pricing) {
-      storage.pilotPricing = storage.pilotPricing.filter(p => p.pilot_id !== pilotId);
-      for (const pr of updates.pricing) {
-        if (storage.pilotPricing) {
-          storage.pilotPricing.push({
-            id: crypto.randomUUID?.() || (await import('uuid')).v4(),
-            pilot_id: pilotId,
-            price_type: pr.priceType || pr.price_type,
-            amount: pr.amount,
-            description: pr.description,
-          });
-        }
+        storage.pilotEquipment.push({
+          id: crypto.randomUUID?.() || (await import('uuid')).v4(),
+          pilot_id: pilotId,
+          drone_model: eq.droneModel || eq.drone_model,
+          has_thermal: eq.hasThermal || eq.has_thermal || false,
+          has_spotlight: eq.hasSpotlight || eq.has_spotlight || false,
+          has_speaker: eq.hasSpeaker || eq.has_speaker || false,
+          camera_type: eq.cameraType || eq.camera_type,
+          notes: eq.notes,
+        });
       }
     }
 

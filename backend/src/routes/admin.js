@@ -41,6 +41,27 @@ router.get('/users', async (req, res, next) => {
   }
 });
 
+// DELETE /api/admin/users/:id — Delete a user
+router.delete('/users/:id', async (req, res, next) => {
+  try {
+    const userId = req.params.id;
+
+    // Don't let admin delete themselves
+    if (userId === req.userId) {
+      throw new AppError('Cannot delete your own account', 400);
+    }
+
+    const deleted = await storage.deleteUser(userId);
+    if (!deleted) {
+      throw new AppError('User not found', 404);
+    }
+
+    res.json({ message: 'User deleted successfully' });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // GET /api/admin/cases — List all cases
 router.get('/cases', async (req, res, next) => {
   try {
