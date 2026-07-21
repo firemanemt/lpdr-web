@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { pilotApi } from '../services/api';
 import toast from 'react-hot-toast';
@@ -12,9 +12,9 @@ export default function PilotProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
-    firstName: '',
-    lastName: '',
-    phone: '',
+    firstName: user?.firstName || '',
+    lastName: user?.lastName || '',
+    phone: user?.phone || '',
     bio: '',
     baseLat: '',
     baseLng: '',
@@ -27,21 +27,26 @@ export default function PilotProfilePage() {
   const loadData = async () => {
     try {
       const res = await pilotApi.getById(user.id);
-      const pilot = res.data.pilot;
+      const pilot = res.data?.pilot || res.data;
+      if (!pilot) return;
+
+      const profile = pilot.profile || {};
+      const equipment = pilot.equipment || [];
+
       setForm({
-        firstName: pilot.first_name || user.firstName || '',
-        lastName: pilot.last_name || user.lastName || '',
-        phone: pilot.phone || user.phone || '',
-        bio: pilot.profile?.bio || '',
-        baseLat: pilot.profile?.base_lat || '',
-        baseLng: pilot.profile?.base_lng || '',
-        serviceRadius: pilot.profile?.service_radius || 25,
-        equipment: pilot.equipment?.length > 0
-          ? pilot.equipment.map(eq => ({
+        firstName: pilot.first_name || user?.firstName || '',
+        lastName: pilot.last_name || user?.lastName || '',
+        phone: pilot.phone || user?.phone || '',
+        bio: profile.bio || '',
+        baseLat: profile.base_lat ? String(profile.base_lat) : '',
+        baseLng: profile.base_lng ? String(profile.base_lng) : '',
+        serviceRadius: profile.service_radius || 25,
+        equipment: equipment.length > 0
+          ? equipment.map(eq => ({
               droneModel: eq.drone_model || '',
-              hasThermal: eq.has_thermal || false,
-              hasSpotlight: eq.has_spotlight || false,
-              hasSpeaker: eq.has_speaker || false,
+              hasThermal: !!eq.has_thermal,
+              hasSpotlight: !!eq.has_spotlight,
+              hasSpeaker: !!eq.has_speaker,
               cameraType: eq.camera_type || '',
               notes: eq.notes || '',
             }))
@@ -49,6 +54,7 @@ export default function PilotProfilePage() {
       });
     } catch (err) {
       console.error('Failed to load profile:', err);
+      toast.error('Could not load profile data');
     } finally {
       setLoading(false);
     }
@@ -138,7 +144,7 @@ export default function PilotProfilePage() {
 
           <div className="form-group">
             <label className="form-label"><FiMail size={11} style={{ verticalAlign: 'middle', marginRight: '0.3rem' }} />Email</label>
-            <input className="form-input" value={user.email} disabled style={{ opacity: 0.6 }} />
+            <input className="form-input" value={user?.email || ''} disabled style={{ opacity: 0.6 }} />
             <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>Email cannot be changed</div>
           </div>
 

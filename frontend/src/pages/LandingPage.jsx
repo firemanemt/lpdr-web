@@ -111,7 +111,7 @@ export default function LandingPage() {
       <section className="hero">
         <div className="container">
           <img src="/lpdr-logo.png" alt="LPDR" style={{ height: '72px', margin: '0 auto 1.25rem', display: 'block', filter: 'drop-shadow(0 0 20px rgba(4,107,210,0.4))' }} />
-          <h1>Lost Pet?<br />Eyes In The Sky</h1>
+          <h1>Lost a Pet?<br />We've Got Eyes In The Sky!</h1>
           <p>Connect instantly with thermal drone pilots in your area.</p>
           <div className="hero-buttons">
             {isAuthenticated && isPetOwner ? (
