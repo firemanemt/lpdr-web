@@ -26,11 +26,14 @@ export default function PilotDashboard() {
 
   const loadData = async () => {
     try {
-      const [casesRes, meRes] = await Promise.all([
-        caseApi.list(),
-        pilotApi.getById(user.id).catch(() => null),
-      ]);
-      setCases(casesRes.data.cases || []);
+      // Load cases and profile separately so one failure doesn't kill the other
+      let casesRes = null;
+      let meRes = null;
+      
+      try { casesRes = await caseApi.list(); } catch (e) { console.warn('Cases load failed:', e.message); }
+      try { meRes = await pilotApi.getById(user.id); } catch (e) { console.warn('Profile load failed:', e.message); }
+      
+      if (casesRes?.data?.cases) setCases(casesRes.data.cases);
       if (meRes?.data?.pilot?.profile) {
         setProfile(meRes.data.pilot.profile);
         setAvailable(meRes.data.pilot.profile.available);
@@ -45,19 +48,22 @@ export default function PilotDashboard() {
   const [toggling, setToggling] = useState(false);
 
   const toggleAvailability = async () => {
-    if (toggling) return; // Prevent rapid double-tap
-    const newState = !available;
+    if (toggling) return;
     setToggling(true);
-    setAvailable(newState);
     try {
-      const res = await pilotApi.toggleAvailability(newState);
-      // Confirm the server accepted it
-      if (res.data?.available !== undefined) {
-        setAvailable(res.data.available);
+      const newState = !available;
+      await pilotApi.toggleAvailability(newState);
+      // Re-read profile from server to get authoritative state
+      const meRes = await pilotApi.getById(user.id);
+      if (meRes?.data?.pilot?.profile) {
+        setProfile(meRes.data.pilot.profile);
+        setAvailable(meRes.data.pilot.profile.available);
+      } else {
+        // Fallback if re-read fails
+        setAvailable(newState);
       }
     } catch (err) {
       console.error('Failed to toggle availability:', err);
-      setAvailable(!newState); // Rollback
     } finally {
       setToggling(false);
     }
