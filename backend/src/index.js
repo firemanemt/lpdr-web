@@ -67,6 +67,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/pilots', pilotRoutes);
 app.use('/api/cases', caseRoutes);
 app.use('/api/cases', messageRoutes);
+app.use('/api/messages', messageRoutes);
 app.use('/api/map', mapRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/content', contentRoutes);

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { FiHome, FiMapPin, FiPlusCircle, FiUser, FiLogOut, FiMenu, FiX, FiMessageSquare, FiSearch, FiBell, FiRadio, FiUserCheck } from 'react-icons/fi';
+import { useState as useLayoutState, useEffect as useLayoutEffect } from 'react';
 
 export default function Layout() {
   const { user, isAuthenticated, logout, isPetOwner, isDronePilot } = useAuth();
@@ -72,9 +73,9 @@ export default function Layout() {
             <FiHome size={20} />
             Home
           </Link>
-          <Link to="/live" className={`bottom-nav-item ${isActive('/live') ? 'active' : ''}`}>
-            <FiRadio size={20} />
-            Live
+          <Link to="/messages" className={`bottom-nav-item ${isActive('/messages') ? 'active' : ''}`}>
+            <FiMessageSquare size={20} />
+            Chat
           </Link>
           {isPetOwner && (
             <Link to="/cases/new" className={`bottom-nav-item ${isActive('/cases/new') ? 'active' : ''}`}>

@@ -71,6 +71,7 @@ export const caseApi = {
 
 // ============ Messages ============
 export const messageApi = {
+  conversations: () => api.get('/messages/conversations'),
   list: (caseId) => api.get(`/cases/${caseId}/messages`),
   send: (caseId, text, imageUrl) => api.post(`/cases/${caseId}/messages`, { text, imageUrl }),
   markRead: (caseId) => api.post(`/cases/${caseId}/messages/read`),
