@@ -148,13 +148,11 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
       });
     }
 
-    // Send verification email
+    // Send verification email in background — don't block the response
     if (user._verificationToken) {
-      try {
-        await sendVerificationEmail(email, firstName, user._verificationToken);
-      } catch (err) {
+      sendVerificationEmail(email, firstName, user._verificationToken).catch(err => {
         console.warn('Failed to send verification email:', err.message);
-      }
+      });
     }
 
     // Generate token

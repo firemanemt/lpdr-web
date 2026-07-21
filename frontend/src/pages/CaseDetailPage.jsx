@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { caseApi, messageApi } from '../services/api';
 import { connectSocket, joinCaseRoom, leaveCaseRoom, getSocket } from '../services/socket';
+import { notifyNewMessage, notifyCaseUpdate, playNotificationSound, requestNotificationPermission } from '../services/notificationService';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { FiSend, FiPhone, FiMapPin, FiClock, FiStar, FiCheckCircle, FiAlertCircle, FiArrowLeft, FiChevronRight, FiMessageSquare } from 'react-icons/fi';
@@ -37,12 +38,28 @@ export default function CaseDetailPage() {
   useEffect(() => {
     loadCase();
     const socket = connectSocket();
-    socket.on('message:new', (msg) => setMessages(prev => [...prev, msg]));
-    socket.on('case:updated', (data) => { if (data.caseId === id) loadCase(); });
+    socket.on('message:new', (msg) => {
+      setMessages(prev => [...prev, msg]);
+      // Notify if message is from the other person
+      if (msg.sender_id !== user?.id) {
+        const senderName = caseData?.pilot && msg.sender_id === caseData.pilot.id 
+          ? `${caseData.pilot.firstName}` 
+          : caseData?.owner ? `${caseData.owner.firstName}` : 'Someone';
+        notifyNewMessage(senderName, msg.text || '📷 Photo');
+      }
+    });
+    socket.on('case:updated', (data) => { 
+      if (data.caseId === id) {
+        loadCase();
+        if (data.status) {
+          notifyCaseUpdate(data.status, caseData?.pet_name || 'Pet');
+        }
+      }
+    });
     return () => { leaveCaseRoom(id); };
   }, [id]);
 
-  useEffect(() => { if (caseData) joinCaseRoom(id); }, [caseData]);
+  useEffect(() => { if (caseData) joinCaseRoom(id); requestNotificationPermission(); }, [caseData]);
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   const loadCase = async () => {
@@ -251,8 +268,16 @@ export default function CaseDetailPage() {
                   )}
                   {messages.map((msg, i) => {
                     const sent = msg.sender_id === user?.id;
+                    const senderName = sent 
+                      ? 'You' 
+                      : (caseData.pilot && msg.sender_id === caseData.pilot.id 
+                        ? `${caseData.pilot.firstName} ${caseData.pilot.lastName}`
+                        : (caseData.owner && msg.sender_id === caseData.owner.id
+                          ? `${caseData.owner.firstName} ${caseData.owner.lastName}`
+                          : 'Other'));
                     return (
                       <div key={msg.id || i} className={`chat-message ${sent ? 'sent' : 'received'} fade-in`}>
+                        {!sent && <div style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 600, marginBottom: '0.2rem' }}>{senderName}</div>}
                         {msg.image_url && (
                           <div style={{ marginBottom: msg.text ? '0.4rem' : 0 }}>
                             <img src={msg.image_url} alt="Shared image" style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }} />

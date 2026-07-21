@@ -131,12 +131,15 @@ export async function sendEmail(to, subject, html) {
 
   if (transport) {
     try {
-      const result = await transport.sendMail({
-        from: `"LPDR" <${config.smtp.from || 'noreply@lostpetdronerecovery.com'}>`,
-        to,
-        subject,
-        html,
-      });
+      const result = await Promise.race([
+        transport.sendMail({
+          from: `"LPDR" <${config.smtp.from || 'noreply@lostpetdronerecovery.com'}>`,
+          to,
+          subject,
+          html,
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Email send timeout')), 10000)),
+      ]);
       console.log(`📧 Email sent to ${to}: ${subject}`);
       return result;
     } catch (err) {

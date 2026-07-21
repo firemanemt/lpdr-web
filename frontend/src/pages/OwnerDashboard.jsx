@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { caseApi } from '../services/api';
+import { requestNotificationPermission, notifyCaseUpdate } from '../services/notificationService';
 import { FiPlus, FiMessageSquare, FiMapPin, FiClock, FiCheckCircle, FiAlertCircle, FiChevronRight } from 'react-icons/fi';
 import LoadingSpinner from '../components/LoadingSpinner';
 
@@ -22,7 +23,7 @@ export default function OwnerDashboard() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  useEffect(() => { loadCases(); }, []);
+  useEffect(() => { loadCases(); requestNotificationPermission(); }, []);
 
   const loadCases = async () => {
     try {

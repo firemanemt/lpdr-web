@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { caseApi, pilotApi } from '../services/api';
+import { notifyNewCase, requestNotificationPermission } from '../services/notificationService';
 import { FiToggleLeft, FiToggleRight, FiMapPin, FiStar, FiClock, FiPhone, FiDollarSign, FiChevronRight, FiRadio, FiShield, FiEdit3 } from 'react-icons/fi';
 import LoadingSpinner from '../components/LoadingSpinner';
 
@@ -21,8 +22,15 @@ export default function PilotDashboard() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const prevCaseCount = useRef(0);
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { 
+    loadData(); 
+    requestNotificationPermission();
+    // Poll for new cases every 30 seconds
+    const interval = setInterval(loadData, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const loadData = async () => {
     try {
@@ -81,6 +89,17 @@ export default function PilotDashboard() {
 
   const activeCases = cases.filter(c => ['matched', 'searching'].includes(c.status));
   const availableCases = cases.filter(c => c.status === 'notifying');
+
+  // Notify when new cases appear
+  useEffect(() => {
+    if (availableCases.length > prevCaseCount.current && prevCaseCount.current >= 0) {
+      const newCase = availableCases[availableCases.length - 1];
+      if (newCase) {
+        notifyNewCase(newCase.pet_name, newCase.last_seen_address || 'your area');
+      }
+    }
+    prevCaseCount.current = availableCases.length;
+  }, [availableCases.length]);
   const completedCases = cases.filter(c => ['found', 'completed', 'reviewed'].includes(c.status));
 
   return (

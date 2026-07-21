@@ -220,9 +220,9 @@ export default function PilotMapPage() {
                 </div>
 
                 {isAuthenticated ? (
-                  <a href={`mailto:${pilot.email}`} style={{ display: 'block', width: '100%', padding: '0.5rem', borderRadius: '6px', background: '#fa9118', color: 'white', border: 'none', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer', fontFamily: "'Cabin Condensed', sans-serif", textAlign: 'center', textDecoration: 'none' }}>
-                    Contact Pilot
-                  </a>
+                  <button onClick={() => navigate('/cases/new')} style={{ display: 'block', width: '100%', padding: '0.5rem', borderRadius: '6px', background: '#fa9118', color: 'white', border: 'none', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer', fontFamily: "'Cabin Condensed', sans-serif", textAlign: 'center' }}>
+                    Report Lost Pet
+                  </button>
                 ) : (
                   <button onClick={() => navigate('/register')} style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', background: '#fa9118', color: 'white', border: 'none', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer', fontFamily: "'Cabin Condensed', sans-serif" }}>
                     Sign Up to Contact
