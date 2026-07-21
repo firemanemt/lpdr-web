@@ -24,9 +24,12 @@ async function wpFetch(endpoint) {
   try {
     const res = await fetch(`${WP_BASE}${endpoint}`, {
       headers: { 'Accept': 'application/json' },
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(15000),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.warn(`WP fetch ${endpoint} returned status ${res.status}`);
+      return null;
+    }
     return await res.json();
   } catch (err) {
     console.warn(`WP fetch failed for ${endpoint}:`, err.message);
@@ -45,6 +48,10 @@ export async function getWPCases() {
 
   // Fetch full data and cache it
   const fullCases = await getWPCasesFull();
+  
+  if (fullCases.length === 0) {
+    console.warn('⚠️ getWPCases: No cases returned from WordPress');
+  }
   
   // Strip sensitive contact info for public consumption
   const publicCases = fullCases.map(c => ({
@@ -82,8 +89,11 @@ export async function getWPCasesFull() {
 
   const raw = await wpFetch('/submit-a-new-case?per_page=50&status=publish');
   if (!raw || !Array.isArray(raw)) {
+    console.warn(`⚠️ WP cases fetch returned: ${raw ? typeof raw : 'null'}`);
     return cache.casesFull.data || [];
   }
+  
+  console.log(`📡 WP returned ${raw.length} cases`);
 
   const cases = raw.map(post => {
     const acf = post.acf || {};
