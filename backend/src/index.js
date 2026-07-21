@@ -72,14 +72,26 @@ app.use('/api/content', contentRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Health check
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
   const dbUrl = config.database.url;
+  const { getStorage } = await import('./services/storage.js');
+  const storage = getStorage();
+  const isPostgres = !!storage.pool;
+  let dbConnected = false;
+  if (isPostgres) {
+    try {
+      await storage.pool.query('SELECT 1');
+      dbConnected = true;
+    } catch { dbConnected = false; }
+  }
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
     version: '1.0.0',
     mode: config.nodeEnv,
-    database: !!dbUrl,
+    database: dbConnected,
+    databaseConfigured: !!dbUrl,
+    storageType: isPostgres ? 'PostgreSQL' : 'In-Memory (DEMO)',
     smtp: !!(config.smtp?.host && config.smtp?.user),
   });
 });
