@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { pilotApi } from '../services/api';
 import toast from 'react-hot-toast';
-import { FiUser, FiMail, FiPhone, FiMapPin, FiEdit3, FiSave, FiArrowLeft, FiShield } from 'react-icons/fi';
+import { FiUser, FiMail, FiPhone, FiMapPin, FiEdit3, FiSave, FiArrowLeft, FiShield, FiLogOut } from 'react-icons/fi';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 export default function PilotProfilePage() {
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, logout } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -243,6 +243,19 @@ export default function PilotProfilePage() {
         {/* Save Button */}
         <button onClick={handleSave} className="btn btn-primary btn-lg" style={{ width: '100%' }} disabled={saving}>
           <FiSave size={16} /> {saving ? 'Saving...' : 'Save Profile'}
+        </button>
+
+        {/* Sign Out */}
+        <button
+          onClick={() => { logout(); navigate('/'); }}
+          style={{
+            width: '100%', marginTop: '1rem', padding: '0.75rem', borderRadius: '8px',
+            background: 'none', border: '1px solid var(--border-default)', color: 'var(--text-muted)',
+            cursor: 'pointer', fontFamily: 'var(--font-body)', fontSize: '0.85rem',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
+          }}
+        >
+          <FiLogOut size={16} /> Sign Out
         </button>
       </div>
     </div>

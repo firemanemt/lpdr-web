@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { FiHome, FiMapPin, FiPlusCircle, FiUser, FiLogOut, FiMenu, FiX, FiMessageSquare, FiSearch, FiBell, FiRadio } from 'react-icons/fi';
+import { FiHome, FiMapPin, FiPlusCircle, FiUser, FiLogOut, FiMenu, FiX, FiMessageSquare, FiSearch, FiBell, FiRadio, FiUserCheck } from 'react-icons/fi';
 
 export default function Layout() {
   const { user, isAuthenticated, logout, isPetOwner, isDronePilot } = useAuth();
@@ -43,8 +43,8 @@ export default function Layout() {
         <div className="top-bar-actions">
           {isAuthenticated ? (
             <>
-              <button className="top-bar-btn" title="Notifications">
-                <FiBell size={16} />
+              <button className="top-bar-btn" onClick={handleLogout} title="Sign Out">
+                <FiLogOut size={16} />
               </button>
               <Link to={getDashboardLink()} className="top-bar-avatar" title={`${user?.firstName} ${user?.lastName}`}>
                 {getInitials()}
@@ -86,10 +86,10 @@ export default function Layout() {
             <FiMapPin size={20} />
             Map
           </Link>
-          <button onClick={handleLogout} className="bottom-nav-item">
-            <FiLogOut size={20} />
-            Exit
-          </button>
+          <Link to={isDronePilot ? '/pilot/profile' : isPetOwner ? '/owner/dashboard' : '/admin'} className={`bottom-nav-item ${isActive('/pilot/profile') || isActive('/owner/dashboard') && isPetOwner ? 'active' : ''}`}>
+            <FiUser size={20} />
+            Profile
+          </Link>
         </nav>
       ) : (
         <nav className="bottom-nav">
