@@ -78,63 +78,11 @@ app.get('/api/health', async (req, res) => {
   const storage = getStorage();
   const isPostgres = !!storage.pool;
   let dbConnected = false;
-  let dbError = null;
-  let userCount = 0;
   if (isPostgres) {
     try {
       await storage.pool.query('SELECT 1');
       dbConnected = true;
-      const countResult = await storage.pool.query('SELECT COUNT(*) FROM users');
-      userCount = parseInt(countResult.rows[0].count);
-    } catch (e) { dbConnected = false; dbError = e.message; }
-  }
-  // Also try a direct fresh connection test if DATABASE_URL is set but not connected
-  let directTest = null;
-  if (dbUrl && !dbConnected) {
-    try {
-      const pg = (await import('pg')).default;
-      const testPool = new pg.Pool({ connectionString: dbUrl, connectionTimeoutMillis: 5000 });
-      const result = await testPool.query('SELECT current_database(), current_user, inet_server_addr()');
-      directTest = { connected: true, info: result.rows[0] };
-      await testPool.end();
-    } catch (e) {
-      directTest = { connected: false, error: e.code || e.message, host: null };
-      try { const u = new URL(dbUrl); directTest.host = u.hostname; directTest.port = u.port; } catch {}
-    }
-  }
-  // Try to discover the PostgreSQL service by scanning common hostnames
-  let discoveredHost = null;
-  if (dbUrl && !dbConnected && directTest?.error === 'ENOTFOUND') {
-    const dns = await import('dns');
-    const tryHost = (hostname) => new Promise((resolve) => {
-      dns.resolve(hostname, (err, addrs) => {
-        resolve(err ? null : { hostname, addresses: addrs });
-      });
-    });
-    const commonNames = ['postgres', 'Postgres', 'PostgreSQL', 'postgresql', 'db', 'DB', 'database', 'Database', 'pg', 'PG', 'lpdr-postgres', 'LPDR-Postgres', 'lpdr-db', 'LPDR-DB', 'LPDR-PostgreSQL', 'lpdr-postgresql', 'railway-postgres', 'web-db', 'api-db', 'app-db', 'lpdrweb-db', 'lpdrweb-postgres'];
-    const results = await Promise.all(commonNames.map(n => tryHost(`${n}.railway.internal`)));
-    discoveredHost = results.filter(Boolean);
-    
-    // If nothing found on .internal, also try scanning all RAILWAY env vars for clues
-    if (discoveredHost.length === 0) {
-      // Try DNS resolve on the web service's own domain to confirm DNS works
-      const selfTest = await tryHost('lpdr-web.railway.internal');
-      discoveredHost = { scanFailed: true, selfTest, scannedHosts: commonNames.length };
-    }
-  }
-  // Try the DATABASE_PUBLIC_URL if available (public internet connection)
-  let publicDbTest = null;
-  const publicDbUrl = process.env.DATABASE_PUBLIC_URL;
-  if (publicDbUrl) {
-    try {
-      const pg = (await import('pg')).default;
-      const testPool = new pg.Pool({ connectionString: publicDbUrl, connectionTimeoutMillis: 5000 });
-      const result = await testPool.query('SELECT 1');
-      publicDbTest = { connected: true };
-      await testPool.end();
-    } catch (e) {
-      try { const u = new URL(publicDbUrl); publicDbTest = { connected: false, error: e.code || e.message, host: u.hostname }; } catch { publicDbTest = { connected: false, error: e.message }; }
-    }
+    } catch { dbConnected = false; }
   }
   res.json({ 
     status: 'ok', 
@@ -142,23 +90,7 @@ app.get('/api/health', async (req, res) => {
     version: '1.0.0',
     mode: config.nodeEnv,
     database: dbConnected,
-    databaseConfigured: !!dbUrl,
     storageType: isPostgres ? 'PostgreSQL' : 'In-Memory (DEMO)',
-    userCount,
-    dbError,
-    directTest,
-    discoveredHost,
-    publicDbTest,
-    railwayEnv: {
-      SERVICE_ID: process.env.RAILWAY_SERVICE_ID,
-      SERVICE_NAME: process.env.RAILWAY_SERVICE_NAME,
-      PRIVATE_DOMAIN: process.env.RAILWAY_PRIVATE_DOMAIN,
-      PUBLIC_DOMAIN: process.env.RAILWAY_PUBLIC_DOMAIN,
-      ENVIRONMENT_ID: process.env.RAILWAY_ENVIRONMENT_ID,
-      PROJECT_ID: process.env.RAILWAY_PROJECT_ID,
-      DB_PUBLIC_URL: process.env.DATABASE_PUBLIC_URL ? process.env.DATABASE_PUBLIC_URL.substring(0, 50) + '...' : null,
-      ALL_DB_VARS: Object.keys(process.env).filter(k => k.toLowerCase().includes('database') || k.toLowerCase().includes('postgres') || k.toLowerCase().includes('pg') || k.toLowerCase().includes('db')).sort(),
-    },
     smtp: !!(config.smtp?.host && config.smtp?.user),
   });
 });
