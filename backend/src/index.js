@@ -167,25 +167,52 @@ async function start() {
     console.warn('⚠️ Storage init failed, running in demo mode:', err.message);
   }
 
-  // Seed admin account if it doesn't exist
+  // Seed essential accounts if they don't exist
   try {
     const storage = (await import('./services/storage.js')).default;
-    const adminEmail = 'admin@lostpetdronerecovery.com';
-    const existing = await storage.findUserByEmail(adminEmail);
-    if (!existing) {
-      const admin = await storage.createUser({
-        email: adminEmail,
+
+    const accountsToSeed = [
+      {
+        email: 'admin@lostpetdronerecovery.com',
         password: 'LPDRadmin2024!',
         firstName: 'Admin',
         lastName: 'LPDR',
         phone: null,
         role: 'admin',
-      });
-      await storage.updateUser(admin.id, { email_verified: true });
-      console.log('👑 Admin account seeded:', adminEmail);
+      },
+      {
+        email: 'josh@lostpetdronerecovery.com',
+        password: 'JoshLPDR2024!',
+        firstName: 'Josh',
+        lastName: 'White',
+        phone: '6074351234',
+        role: 'drone_pilot',
+      },
+    ];
+
+    for (const account of accountsToSeed) {
+      const existing = await storage.findUserByEmail(account.email);
+      if (!existing) {
+        const user = await storage.createUser(account);
+        await storage.updateUser(user.id, { email_verified: true });
+
+        // Create pilot profile for drone pilots
+        if (account.role === 'drone_pilot') {
+          await storage.createPilotProfile(user.id, {
+            baseLat: 42.4245559,
+            baseLng: -74.981858,
+            serviceRadius: 50,
+            faaCertNumber: 'FAA-107-LPDR',
+            insuranceProvider: null,
+            insurancePolicyNumber: null,
+          });
+        }
+
+        console.log(`✅ Seeded account: ${account.email} (${account.role})`);
+      }
     }
   } catch (err) {
-    console.warn('⚠️ Admin seed failed:', err.message);
+    console.warn('⚠️ Account seed failed:', err.message);
   }
 
   httpServer.listen(config.port, () => {
