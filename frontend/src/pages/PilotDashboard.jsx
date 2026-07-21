@@ -257,6 +257,24 @@ export default function PilotDashboard() {
           </div>
         )}
 
+        {/* Pilot Tools Quick Access */}
+        <div style={{ marginTop: '1.5rem' }}>
+          <Link to="/pilot/tools" style={{ display: 'block', textDecoration: 'none' }}>
+            <div className="card card-interactive" style={{ borderLeft: '3px solid var(--primary)' }}>
+              <div style={{ padding: '0.85rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <span style={{ fontSize: '1.2rem' }}>🛸</span>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Pilot Tools</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Search grids, pet behavior, checklists, thermal ID</div>
+                  </div>
+                </div>
+                <FiChevronRight size={16} style={{ color: 'var(--text-muted)' }} />
+              </div>
+            </div>
+          </Link>
+        </div>
+
         {/* Profile Summary */}
         <div style={{ marginTop: '1.5rem' }}>
           <div className="section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

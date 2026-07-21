@@ -24,6 +24,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import PilotVerificationPage from './pages/PilotVerificationPage';
 import PilotProfilePage from './pages/PilotProfilePage';
+import PilotToolsPage from './pages/PilotToolsPage';
 import AdminDashboard from './pages/AdminDashboard';
 import NotFoundPage from './pages/NotFoundPage';
 
@@ -99,6 +100,16 @@ export default function App() {
             <Route path="/pilot/profile" element={
               <ProtectedRoute requiredRole="drone_pilot">
                 <PilotProfilePage />
+              </ProtectedRoute>
+            } />
+            <Route path="/pilot/tools" element={
+              <ProtectedRoute requiredRole="drone_pilot">
+                <PilotToolsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/pilot/tools/:caseId" element={
+              <ProtectedRoute requiredRole="drone_pilot">
+                <PilotToolsPage />
               </ProtectedRoute>
             } />
 

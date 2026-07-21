@@ -349,6 +349,11 @@ export default function CaseDetailPage() {
             </div>
 
             {/* Action Buttons */}
+            {isDronePilot && ['matched', 'searching'].includes(caseData.status) && (
+              <button onClick={() => navigate(`/pilot/tools/${caseData.id}`)} className="btn btn-outline" style={{ width: '100%', borderColor: 'var(--primary)' }}>
+                🛸 Pilot Tools — Search Grid & Thermal Guide
+              </button>
+            )}
             {isDronePilot && caseData.status === 'matched' && (
               <button onClick={() => updateStatus('searching', 'Starting search')} className="btn btn-primary" style={{ width: '100%' }}>
                 <FiMapPin size={16} /> Launch Search
