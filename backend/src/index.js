@@ -45,6 +45,14 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '10mb' }));
 
+// Never cache API responses
+app.use('/api', (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -119,7 +127,21 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const frontendDist = path.join(__dirname, '../../frontend/dist');
 
-app.use(express.static(frontendDist));
+app.use(express.static(frontendDist, {
+  maxAge: '1d',
+  setHeaders: (res, filePath) => {
+    // Never cache index.html — always serve latest
+    if (filePath.endsWith('index.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+    // API responses never cached
+    if (filePath.startsWith('/api/')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+  },
+}));
 
 // SPA fallback — serve index.html for any non-API route
 app.get('*', (req, res) => {
