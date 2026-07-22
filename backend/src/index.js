@@ -274,15 +274,15 @@ async function start() {
 ║     WebSocket: Active                            ║
 ╚══════════════════════════════════════════════════╝
     `);
-
-    // Start WP case monitor — alerts pilots when new website cases appear
-    try {
-      const { startWPCaseMonitor } = await import('./services/wpCaseMonitor.js');
-      startWPCaseMonitor();
-    } catch (err) {
-      console.warn('⚠️ WP case monitor failed to start:', err.message);
-    }
   });
+
+  // Start WP case monitor — alerts pilots when new website cases appear
+  try {
+    const { startWPCaseMonitor } = await import('./services/wpCaseMonitor.js');
+    startWPCaseMonitor();
+  } catch (err) {
+    console.warn('⚠️ WP case monitor failed to start:', err.message);
+  }
 }
 
 start();
