@@ -1,12 +1,21 @@
 import webpush from 'web-push';
 import pool from '../config/database.js';
 
-// Configure VAPID - these keys are generated once and must stay the same
-const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || 'BANMdgvCAkjRIDkEuhFCXqKRLpTHVy_CwX9KQEEaJ9hQjjCJyCf_ELg4O9eMHTzeP039AKdDFyLmgiRVVL5jS4I';
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || 'UZvGYHWx8831SVqJjwL2g1jp4ibdHVNyH_MbF8LbsCM';
+// VAPID keys for push notifications
+// MUST be set as env vars on Railway: VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || 'BDZR0gbcUEgDBeq0PK1SxqytzUc0qAv1_6Y5eRkRl0-N1F3qGTSUzZq0CUzieSHweUrXuX-z_4hn9T_LYX8F_Xs';
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || 'ZSq2N3J3Eu8kmyfKtAMcvoNaBJTN5dq0CA52RgbKBIs';
 const VAPID_SUBJECT = `mailto:support@lostpetdronerecovery.com`;
 
-webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+let pushEnabled = false;
+try {
+  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+  pushEnabled = true;
+  console.log('📱 Web Push configured');
+} catch (err) {
+  console.warn('⚠️ Web Push DISABLED — invalid VAPID keys:', err.message);
+  console.warn('⚠️ Set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY env vars to fix');
+}
 
 export function getVapidPublicKey() {
   return VAPID_PUBLIC_KEY;
@@ -42,6 +51,8 @@ export async function removeSubscription(userId, endpoint) {
  * Send a push notification to a specific user
  */
 export async function sendPushToUser(userId, payload) {
+  if (!pushEnabled) return;
+
   const result = await pool.query(
     `SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = $1`,
     [userId]
@@ -91,6 +102,8 @@ export async function sendPushToUser(userId, payload) {
  * Send push notification to all users with a specific role
  */
 export async function sendPushToRole(role, payload) {
+  if (!pushEnabled) return;
+
   const result = await pool.query(
     `SELECT DISTINCT ps.endpoint, ps.p256dh, ps.auth
      FROM push_subscriptions ps
