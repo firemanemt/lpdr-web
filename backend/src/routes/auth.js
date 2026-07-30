@@ -23,6 +23,8 @@ async function checkWPCredentials(email, password) {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         'Cookie': 'wordpress_test_cookie=WP Cookie check',
+        'User-Agent': 'Mozilla/5.0 (compatible; LPDR-App/1.0)',
+        'Referer': 'https://lostpetdronerecovery.com/sign-in/',
       },
       body: new URLSearchParams({
         log: email,
@@ -62,6 +64,8 @@ async function getWPUserProfile(email, password) {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         'Cookie': 'wordpress_test_cookie=WP Cookie check',
+        'User-Agent': 'Mozilla/5.0 (compatible; LPDR-App/1.0)',
+        'Referer': 'https://lostpetdronerecovery.com/sign-in/',
       },
       body: new URLSearchParams({
         log: email,
@@ -224,7 +228,8 @@ router.post('/login', validate(loginSchema), async (req, res, next) => {
     // 2. User NOT in local DB — try WordPress authentication
     const wpValid = await checkWPCredentials(email, password);
     if (!wpValid) {
-      throw new AppError('Invalid email or password', 401);
+      // Neither local nor WP credentials worked
+      throw new AppError('Invalid email or password. If you registered on the LPDR website, use the same email and password here.', 401);
     }
 
     // 3. WP auth succeeded! Auto-create app account
